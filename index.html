@@ -1,0 +1,1489 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Video Review & Comment Logger</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --sn-navy:#0B2E59; --sn-navy-dark:#06203E; --sn-navy-light:#15407A;
+    --sn-green:#2E9E3F; --sn-green-dark:#247A32; --sn-green-light:#E8F7EB;
+    --sn-bg:#F5F7FA; --sn-panel:#FFFFFF; --sn-border:#E2E8F0; --sn-border-light:#EEF2F6;
+    --sn-text:#1B1F23; --sn-muted:#64748B;
+    --sn-warn:#B8860B; --sn-warn-bg:#FFF7E0; --sn-danger:#DC2626; --sn-danger-bg:#FEF2F2; --sn-ok-bg:#ECFDF3;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow-md:0 4px 10px rgba(16,24,40,.08);
+    --shadow-lg:0 10px 30px rgba(16,24,40,.15);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--sn-bg);
+    color:var(--sn-text);
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    display:flex;align-items:center;gap:14px;padding:14px 24px;
+    background:linear-gradient(135deg, var(--sn-navy) 0%, var(--sn-navy-dark) 100%);
+    color:white;flex-wrap:wrap;box-shadow:var(--shadow-md);position:relative;z-index:10;
+  }
+  header h1{font-size:18px;margin:0;flex:1;min-width:220px;font-weight:700;letter-spacing:-.01em;}
+  header .tagline{font-size:11.5px;opacity:.7;display:block;margin-top:3px;font-weight:400;}
+  header #roleLabel{background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;font-weight:600;}
+  header #headerFileStatus{background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;transition:color .3s;}
+
+  button{
+    background:var(--sn-green);border:none;color:white;padding:9px 16px;border-radius:7px;
+    cursor:pointer;font-weight:600;font-size:13.5px;transition:all .18s ease;
+    box-shadow:var(--shadow-sm);
+  }
+  button:hover:not(:disabled){background:var(--sn-green-dark);box-shadow:var(--shadow-md);transform:translateY(-1px);}
+  button:active:not(:disabled){transform:translateY(0);}
+  button.secondary{background:white;color:var(--sn-navy);border:1.5px solid var(--sn-border);box-shadow:none;}
+  button.secondary:hover:not(:disabled){background:#F8FAFC;border-color:var(--sn-navy-light);}
+  button.danger{background:var(--sn-danger);}
+  button.danger:hover:not(:disabled){background:#B91C1C;}
+  button.link-btn{background:transparent;color:#BFDBFE;border:none;padding:0;font-size:12.5px;text-decoration:underline;box-shadow:none;font-weight:500;}
+  button.link-btn:hover{color:white;transform:none;}
+  button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;}
+
+  select,input[type=text],input[type=checkbox],textarea{
+    background:white;color:var(--sn-text);border:1.5px solid var(--sn-border);
+    border-radius:7px;padding:8px 11px;font-size:13.5px;transition:border-color .15s;
+  }
+  select:focus,input[type=text]:focus,textarea:focus{
+    outline:none;border-color:var(--sn-navy-light);box-shadow:0 0 0 3px rgba(21,64,122,.1);
+  }
+
+  .tabs{display:flex;gap:2px;padding:0 24px;background:var(--sn-navy-dark);box-shadow:inset 0 -1px 0 rgba(255,255,255,.06);}
+  .tabs button{
+    background:transparent;color:rgba(255,255,255,.65);border-radius:8px 8px 0 0;
+    padding:13px 18px;font-weight:600;font-size:13.5px;border-bottom:3px solid transparent;
+    box-shadow:none;transition:all .18s;
+  }
+  .tabs button:hover{background:rgba(255,255,255,.06);color:white;transform:none;}
+  .tabs button.active{color:white;border-bottom:3px solid var(--sn-green);background:rgba(255,255,255,.05);}
+
+  .subtabs{display:flex;gap:8px;margin-bottom:16px;}
+  .subtabs button{background:white;color:var(--sn-navy);border-radius:8px;border:1.5px solid var(--sn-border);box-shadow:var(--shadow-sm);}
+  .subtabs button.active{background:var(--sn-navy);color:white;border-color:var(--sn-navy);}
+
+  .view{display:none;padding:24px;max-width:1450px;margin:0 auto;}
+  .view.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  .subview{display:none;}
+  .subview.active{display:block;}
+
+  .card{
+    background:var(--sn-panel);border:1px solid var(--sn-border-light);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
+  }
+  .card:hover{box-shadow:var(--shadow-md);}
+
+  .section-title{
+    color:var(--sn-navy);font-size:15px;font-weight:700;margin:0 0 12px 0;
+    border-left:4px solid var(--sn-green);padding-left:11px;letter-spacing:-.01em;
+  }
+
+  .badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.01em;}
+  .b-signedoff{background:var(--sn-ok-bg);color:var(--sn-green-dark);}
+  .b-reviewer{background:#EFF6FF;color:#1D4ED8;}
+  .b-developer{background:var(--sn-warn-bg);color:#92400E;}
+  .b-none{background:#F1F5F9;color:var(--sn-muted);}
+
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(6,32,62,.65);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease;
+  }
+  .modal{
+    background:white;padding:32px;border-radius:16px;min-width:400px;max-width:460px;
+    box-shadow:var(--shadow-lg);animation:modalPop .25s cubic-bezier(.2,1,.3,1);
+  }
+  @keyframes modalPop{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .modal h2{color:var(--sn-navy);margin-top:0;font-size:22px;font-weight:800;letter-spacing:-.02em;}
+  .modal p.note{margin-top:4px;}
+
+  .lockbar{background:var(--sn-warn-bg);color:#92400E;padding:10px 24px;font-size:13px;display:none;font-weight:500;}
+  .micbar{
+    background:linear-gradient(135deg,#1D4ED8,#1E40AF);color:white;padding:10px 24px;font-size:13px;
+    display:none;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;z-index:150;
+    box-shadow:var(--shadow-md);
+  }
+  .micbar.active{display:flex;}
+
+  video{width:100%;max-height:52vh;background:#0A0A0A;border-radius:10px;box-shadow:var(--shadow-md);}
+  .vwrap{display:flex;gap:18px;flex-wrap:wrap;}
+  .vcol{flex:2;min-width:380px;}
+  .ccol{flex:1;min-width:300px;}
+  .navrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;}
+  .current-comment-box{font-size:13.5px;color:var(--sn-text);margin:0;line-height:1.6;}
+  .currentIssue{font-size:12.5px;color:var(--sn-muted);flex:1;min-width:200px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{border-bottom:1px solid var(--sn-border-light);padding:9px 10px;text-align:left;vertical-align:top;}
+  th{background:#F8FAFC;color:var(--sn-navy);font-weight:700;border-bottom:2px solid var(--sn-border);}
+  th small{display:block;font-weight:400;color:var(--sn-muted);margin-top:2px;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:#FAFBFC;}
+  .thumb{width:72px;height:42px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--sn-border);transition:transform .15s;}
+  .thumb:hover{transform:scale(1.08);box-shadow:var(--shadow-md);}
+
+  .note{font-size:12.5px;color:var(--sn-muted);line-height:1.5;}
+  input.followup{width:100%;font-size:12.5px;}
+
+  .fileStatus{
+    font-size:12.5px;color:var(--sn-muted);padding:10px 14px;background:white;
+    border:1.5px dashed var(--sn-border);border-radius:8px;margin-bottom:14px;font-weight:500;
+  }
+
+  .statbar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+  .stat{
+    flex:1;min-width:160px;background:white;border:1px solid var(--sn-border-light);
+    border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
+  }
+  .stat:hover{box-shadow:var(--shadow-md);}
+  .stat .num{font-size:26px;font-weight:800;color:var(--sn-navy);letter-spacing:-.02em;}
+
+  .lightbox-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:300;cursor:zoom-out;}
+  .lightbox-bg.active{display:flex;animation:fadeIn .2s;}
+  .lightbox-bg img{max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+
+  .multiselect-box{
+    border:1.5px solid var(--sn-border);border-radius:8px;padding:10px;max-height:150px;
+    overflow:auto;background:white;min-width:190px;
+  }
+  .multiselect-box label{display:block;font-size:12.5px;padding:4px 2px;cursor:pointer;border-radius:4px;transition:background .12s;}
+  .multiselect-box label:hover{background:#F8FAFC;}
+  .filterbar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-start;}
+
+  .obs-item{
+    display:flex;gap:12px;align-items:flex-start;border:1px solid var(--sn-border-light);
+    border-radius:8px;padding:12px;margin-bottom:10px;background:#FAFBFC;transition:box-shadow .15s;
+  }
+  .obs-item:hover{box-shadow:var(--shadow-sm);}
+  .obs-item img{width:96px;border-radius:6px;}
+  .obs-actions{display:flex;gap:8px;margin-top:8px;}
+  .obs-actions button{padding:6px 12px;font-size:12px;}
+
+  .dash-card{
+    display:flex;flex-direction:column;background:white;border:1px solid var(--sn-border-light);
+    border-radius:10px;padding:16px 18px;text-align:left;box-shadow:var(--shadow-sm);transition:all .18s;
+  }
+  .dash-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+  .dash-card-title{font-weight:700;color:var(--sn-navy);font-size:14.5px;margin-bottom:8px;letter-spacing:-.01em;}
+  .dash-card-actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;margin-top:12px;border-top:1px solid var(--sn-border-light);}
+  .dash-card-actions button{flex:1;min-width:90px;}
+
+  .group-controls{display:flex;gap:8px;margin-bottom:12px;}
+  .app-group{
+    border:1px solid var(--sn-border-light);border-radius:12px;margin-bottom:14px;
+    background:white;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
+  }
+  .app-group:hover{box-shadow:var(--shadow-md);}
+  .app-header{
+    display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;
+    background:linear-gradient(to right, #F8FAFC, #FFFFFF);transition:background .15s;
+  }
+  .app-header:hover{background:#F1F5F9;}
+  .app-header .chevron{transition:transform .2s;font-size:12px;color:var(--sn-navy);}
+  .app-header.collapsed .chevron{transform:rotate(-90deg);}
+  .app-header .app-name{font-weight:700;color:var(--sn-navy);font-size:14.5px;flex:1;letter-spacing:-.01em;}
+  .app-counts{display:flex;gap:7px;flex-wrap:wrap;}
+  .app-body{padding:14px 18px 18px;animation:expandDown .2s ease;}
+  .app-body.collapsed{display:none;}
+  @keyframes expandDown{from{opacity:0;}to{opacity:1;}}
+
+  .video-group{border:1px solid var(--sn-border-light);border-radius:8px;margin-bottom:10px;background:#FCFDFE;overflow:hidden;}
+  .video-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background .12s;}
+  .video-header:hover{background:#F3F6F9;}
+  .video-header .chevron{transition:transform .2s;font-size:11px;color:var(--sn-navy);}
+  .video-header.collapsed .chevron{transform:rotate(-90deg);}
+  .video-header .video-name{font-weight:600;color:var(--sn-navy);font-size:13.5px;flex:1;}
+  .video-body{padding:10px 14px 14px;}
+  .video-body.collapsed{display:none;}
+  .video-meta{font-size:11.5px;color:var(--sn-muted);}
+
+  .dev-restricted-note{
+    background:var(--sn-warn-bg);color:#92400E;padding:12px 16px;border-radius:8px;
+    font-size:12.5px;margin-bottom:14px;border-left:3px solid var(--sn-warn);
+  }
+  .dash-row{
+    display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
+    border:1px solid var(--sn-border-light);border-radius:10px;background:white;
+    margin-bottom:10px;box-shadow:var(--shadow-sm);transition:box-shadow .15s;
+  }
+  .dash-row:hover{box-shadow:var(--shadow-md);}
+  .dash-row b{color:var(--sn-navy);}
+
+  textarea.edit-inline{width:100%;font-size:12.5px;}
+
+  .sync-banner{
+    background:#EFF6FF;color:#1D4ED8;padding:8px 24px;font-size:12.5px;
+    display:none;align-items:center;gap:8px;border-bottom:1px solid #DBEAFE;font-weight:500;
+  }
+  .sync-banner.show{display:flex;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:#1D4ED8;animation:pulseDot 1.2s infinite;}
+  @keyframes pulseDot{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="modal-bg" id="setupModal">
+  <div class="modal">
+    <h2>👋 Get started</h2>
+    <p class="note">Select your role, then load your spreadsheet.</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <button id="btnReviewer">👀 I'm a Reviewer</button>
+      <button id="btnDeveloper" class="secondary">🛠️ I'm a Developer (NIIT)</button>
+    </div>
+    <div id="fileSection" style="display:none;border-top:1px solid #eee;padding-top:16px;">
+      <p class="note" style="margin-top:0;">Role selected: <b id="roleConfirmLabel"></b></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="secondary" id="btnDownloadTemplate">⬇ Download Blank Template</button>
+        <button id="btnImportSpreadsheet">📂 Import Spreadsheet</button>
+      </div>
+      <p class="note" style="margin-top:10px;">New to this tool? Download the template, fill it in (or leave blank), then import it back. Once imported in Chrome/Edge, changes auto-sync back to the same file every 3 seconds.</p>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox-bg" id="lightbox" onclick="this.classList.remove('active')"><img id="lightboxImg" src=""></div>
+<div class="lockbar" id="lockBar"></div>
+<div class="sync-banner" id="syncBanner"><span class="sync-dot"></span> <span id="syncBannerText">Live sync active — saving every 3 seconds</span></div>
+<div class="micbar" id="micBar"><span>🎤</span> <b id="micBarLabel">Recording...</b> <button class="secondary" style="padding:4px 10px;margin-left:auto;" id="btnStopMicBar">Stop</button></div>
+
+<header>
+  <div><h1>Video Review & Comment Logger</h1><span class="tagline">Now Platform–styled review workspace</span></div>
+  <span id="roleLabel" style="font-size:12px;opacity:.85;"></span>
+  <span id="headerFileStatus" style="font-size:12px;opacity:.9;"></span>
+  <button class="link-btn" id="btnChangeFile" style="display:none;">Change spreadsheet</button>
+</header>
+
+<div class="tabs">
+  <button data-tab="home" class="active">Home / Read Me</button>
+  <button data-tab="dashboard">Dashboard</button>
+  <button data-tab="newreview">New Review</button>
+  <button data-tab="validations">Review Validations</button>
+</div>
+
+<div class="view active" id="view-home">
+  <div class="card">
+    <h2 class="section-title">About this tool</h2>
+    <ul>
+      <li>Workflow: Reviewer logs comments → Developer marks "Fixed by NIIT" → once ALL comments on a video are fixed, it's "Ready for Reviewer" → Reviewer approves each fix → once ALL approved, video is "Signed Off."</li>
+      <li><b>Live Sync:</b> once you import a spreadsheet in Chrome/Edge, every change you make is automatically written back to the same file every 3 seconds — no manual save needed. A blue banner at the top confirms sync is active.</li>
+      <li><b>Developers cannot add new comments on any tab.</b> Developers may only mark "Fixed by NIIT" and add Follow-up Notes to existing comments.</li>
+      <li>Comments are grouped by Application → Video, collapsed by default. Use Expand All / Collapse All to control visibility quickly.</li>
+      <li>Signed-off videos are hidden from the Reviewer/Developer dashboard views but remain visible in Overview and in Review Validations' Signed-Off table.</li>
+      <li>Voice comments (Reviewer only): click Start Recording, speak, click Stop Recording when done. Recording auto-stops after 2 minutes as a safety cap. Nothing is submitted until you click Add Comment.</li>
+      <li>Use Prev/Next under the video to step through comments — the full comment text (no character limit) is shown directly below the video.</li>
+      <li>Timestamps are shown and stored as <b>mm:ss.s</b> everywhere.</li>
+    </ul>
+    <h3 style="color:var(--sn-navy);">⚠️ Important note on live sync</h3>
+    <ul>
+      <li>Live sync only works in <b>Chrome or Edge</b>, and only after using "Import Spreadsheet" (not the fallback upload mode in other browsers).</li>
+      <li>If two people edit the same file at the same time, the person who saves last can still overwrite the other's changes — live sync reduces this risk window to seconds, but does not eliminate it. Avoid both Reviewer and Developer editing the exact same comment row simultaneously.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="view" id="view-dashboard">
+  <div class="subtabs">
+    <button data-sub="reviewer" class="active">Reviewer View</button>
+    <button data-sub="developer">Developer View</button>
+    <button data-sub="overview">Overview</button>
+  </div>
+  <div class="subview active" id="sub-reviewer">
+    <p class="note">Videos ready for your review (signed-off videos are hidden here).</p>
+    <div id="reviewerDashContent"></div>
+  </div>
+  <div class="subview" id="sub-developer">
+    <p class="note">Videos with open issues (signed-off videos are hidden here).</p>
+    <div id="developerDashContent"></div>
+  </div>
+  <div class="subview" id="sub-overview">
+    <div class="statbar" id="overviewStatBar"></div>
+    <div class="filterbar">
+      <div><label class="note"><b>Filter by Application</b></label><div class="multiselect-box" id="msAppFilter"></div></div>
+      <div><label class="note"><b>Filter by Status</b></label>
+        <div class="multiselect-box" id="msStatusFilter">
+          <label><input type="checkbox" value="readyDeveloper" checked> Ready for Developer</label>
+          <label><input type="checkbox" value="readyReviewer" checked> Ready for Reviewer</label>
+          <label><input type="checkbox" value="signedoff" checked> Signed Off</label>
+          <label><input type="checkbox" value="no-comments" checked> No comments yet</label>
+        </div>
+      </div>
+    </div>
+    <div id="overviewContent"></div>
+  </div>
+</div>
+
+<div class="view" id="view-newreview">
+  <div class="fileStatus" id="fileStatusNR">No spreadsheet loaded.</div>
+  <div class="filterbar">
+    <select id="nrFilterApp"><option value="">All Applications</option></select>
+    <select id="nrFilterVideo"><option value="">Select a Video</option></select>
+    <button class="secondary" id="nrBrowseVideo">Browse Video File</button>
+  </div>
+  <div class="vwrap">
+    <div class="vcol">
+      <video id="player_nr" controls></video>
+      <div class="navrow">
+        <button class="secondary" id="btnPrev_nr">⏮ Prev Issue</button>
+        <button class="secondary" id="btnNext_nr">Next Issue ⏭</button>
+        <span id="curTimeLabel_nr" class="note"></span>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <h3 class="section-title" style="margin-bottom:6px;">Current Comment</h3>
+        <p id="currentCommentFull_nr" class="current-comment-box">Use Prev/Next to view a comment here.</p>
+      </div>
+      <div class="card"><button id="btnReviewCompleteNR" style="width:100%;" disabled>✔ Review Complete – Stamp & Sync</button></div>
+    </div>
+    <div class="ccol">
+      <div class="card" id="addCommentCardNR">
+        <button class="secondary" id="btnAutoScan_nr" style="width:100%;margin-bottom:12px;">🔍 Auto-Scan for URLs</button>
+        <h3 class="section-title">Add Comment</h3>
+        <textarea id="commentBox_nr" rows="4" style="width:100%;" placeholder="Click here to pause video & comment..."></textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button id="btnStartRec_nr">🎤 Start Recording</button>
+          <button id="btnStopRec_nr" class="secondary" disabled>⏹ Stop Recording</button>
+        </div>
+        <div style="margin-top:8px;"><button id="btnAddComment_nr" style="width:100%;">Add Comment</button></div>
+        <div style="margin-top:6px;font-size:12px;color:var(--sn-muted);" id="pendingMeta_nr"></div>
+      </div>
+      <div class="dev-restricted-note" id="devNoteNR" style="display:none;">Developer view: you cannot add new comments here. Go to "Review Validations," select a video, mark issues "Fixed by NIIT," and add Follow-up Notes as needed.</div>
+      <div class="card" id="obsCard_nr" style="display:none;"><h3 class="section-title">Auto-Scan Observations</h3><div id="obsList_nr"></div></div>
+      <div class="card"><h3 class="section-title">Recently Logged (this video)</h3><table><tbody id="nrRecentTable"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-validations">
+  <div class="fileStatus" id="fileStatusRV">No spreadsheet loaded.</div>
+  <div class="filterbar">
+    <select id="rvFilterApp"><option value="">All Applications</option></select>
+    <select id="rvFilterVideo"><option value="">All Videos</option></select>
+    <select id="rvFilterStatus">
+      <option value="all">All comments</option><option value="open">Open</option>
+      <option value="fixed">Fixed (pending approval)</option><option value="approved">Approved</option>
+    </select>
+    <button class="secondary" id="rvBrowseVideo">Browse Video File</button>
+  </div>
+  <div id="rvDevPrompt" class="card" style="display:none;">
+    <p class="note">Select an <b>Application</b> and <b>Video</b> above to view and process comments for that video.</p>
+  </div>
+  <div class="vwrap" id="rvPlayerWrap">
+    <div class="vcol">
+      <video id="player_rv" controls></video>
+      <div class="navrow">
+        <button class="secondary" id="btnPrev_rv">⏮ Prev Issue</button>
+        <button class="secondary" id="btnNext_rv">Next Issue ⏭</button>
+        <button id="btnQuickAction_rv">Approve Fix</button>
+        <span class="currentIssue" id="currentIssueLabel_rv"></span>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <h3 class="section-title" style="margin-bottom:6px;">Current Comment</h3>
+        <p id="currentCommentFull_rv" class="current-comment-box">Use Prev/Next to view a comment here.</p>
+      </div>
+      <div class="card"><button id="btnReviewCompleteRV" style="width:100%;" disabled>✔ Review Complete – Stamp & Sync</button></div>
+    </div>
+    <div class="ccol">
+      <div class="card" id="addCommentCardRV">
+        <button class="secondary" id="btnAutoScan_rv" style="width:100%;margin-bottom:12px;">🔍 Auto-Scan for URLs</button>
+        <h3 class="section-title">Add Comment</h3>
+        <textarea id="commentBox_rv" rows="4" style="width:100%;" placeholder="Click here to pause video & comment..."></textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button id="btnStartRec_rv">🎤 Start Recording</button>
+          <button id="btnStopRec_rv" class="secondary" disabled>⏹ Stop Recording</button>
+        </div>
+        <div style="margin-top:8px;"><button id="btnAddComment_rv" style="width:100%;">Add Comment</button></div>
+        <div style="margin-top:6px;font-size:12px;color:var(--sn-muted);" id="pendingMeta_rv"></div>
+      </div>
+      <div class="dev-restricted-note" id="devNoteRV" style="display:none;">Developer view: you cannot add new comments. Use the table below to mark "Fixed by NIIT" and add Follow-up Notes.</div>
+      <div class="card" id="obsCard_rv" style="display:none;"><h3 class="section-title">Auto-Scan Observations</h3><div id="obsList_rv"></div></div>
+    </div>
+  </div>
+  <div class="card" id="activeTableCard">
+    <h3 class="section-title">Active Comments</h3>
+    <div id="groupedCommentsContainer"></div>
+  </div>
+  <div class="card">
+    <h3 class="section-title">✔ Signed-Off Videos</h3>
+    <table><thead><tr><th>Application</th><th>Video</th><th>Total</th><th>Approved</th><th>Actions</th></tr></thead>
+    <tbody id="signedOffTableBody"></tbody></table>
+  </div>
+</div>
+
+<script>
+/* ============ STATE ============ */
+const sessionId = crypto.randomUUID();
+let role=null, fileHandle=null, workbook=null, comments=[], config={}, videoFiles={};
+let heartbeatTimer=null, recognition=null, micStream=null, micPermissionGranted=false;
+const DEFAULT_FPS=30;
+const COMMENT_COLUMNS=['CommentID','Application','VideoName','Timestamp','TimestampDisplay','Frame','CommentText','InputType','CreatedBy','CreatedAt','FixedByNIIT','ApprovedByReviewer','AutoDetected','FollowUpNotes','ScreenshotDataUrl'];
+let nrVideoKey=null, rvVideoKey=null, pendingCaptures={nr:null,rv:null}, rvCurrentCommentId=null;
+let dashSub='reviewer';
+let pendingObservations={nr:[],rv:[]};
+
+let expandedApps = new Set();
+let expandedVideos = new Set();
+
+let recognitionActive = {nr:false, rv:false};
+let finalTranscripts = {nr:'', rv:''};
+let recordingTimers = {nr:null, rv:null};
+let countdownIntervals = {nr:null, rv:null};
+const MAX_RECORDING_MS = 2 * 60 * 1000;
+
+/* ===== LIVE SYNC STATE ===== */
+let syncInProgress = false;
+let userIsTyping = false;
+let lastSyncSuccess = null;
+
+/* ============ UTIL ============ */
+function uid(){return 'C'+Math.random().toString(36).slice(2,10);}
+function fmtTime(sec){
+  sec=Math.max(0,Number(sec)||0);
+  const m=Math.floor(sec/60), s=sec-m*60;
+  return `${String(m).padStart(2,'0')}:${s.toFixed(1).padStart(4,'0')}`;
+}
+function parseTimeFlexible(val){
+  if(typeof val==='number') return val;
+  const str=String(val).trim(); if(!str) return 0;
+  const parts=str.split(':').map(p=>parseFloat(p));
+  if(parts.length===2) return parts[0]*60+parts[1];
+  if(parts.length===3) return parts[0]*3600+parts[1]*60+parts[2];
+  return parseFloat(str)||0;
+}
+function videoKey(app,vid){return app+'|'+vid;}
+function nowIso(){return new Date().toISOString();}
+function checkLibLoaded(){ if(typeof XLSX==='undefined'){ alert('Spreadsheet library failed to load.'); return false; } return true; }
+function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').classList.add('active'); }
+window.openLightbox=openLightbox;
+function parseAppFromVideoName(nameNoExt){
+  const match=nameNoExt.match(/video/i); if(!match) return null;
+  const idx=match.index;
+  let app=nameNoExt.slice(0,idx).replace(/[_\-\s]+$/,'').trim();
+  let vid=nameNoExt.slice(idx).replace(/^[_\-\s]+/,'').trim()||nameNoExt;
+  return {app:app||'UnknownApp', vid};
+}
+
+/* ===== TRACK TYPING STATE (pauses sync mid-keystroke) ===== */
+document.addEventListener('focusin', (e)=>{
+  if(e.target.matches('textarea, input[type=text]')) userIsTyping = true;
+});
+document.addEventListener('focusout', (e)=>{
+  if(e.target.matches('textarea, input[type=text]')) userIsTyping = false;
+});
+
+/* ============ FILE STATUS + SYNC INDICATOR ============ */
+function fileStatusText(){
+  if(!workbook) return 'No spreadsheet loaded.';
+  if(fileHandle) return `📄 ${fileHandle.name}`;
+  return '📄 Loaded (unsaved — live sync unavailable in this mode)';
+}
+function refreshFileStatus(){
+  const txt = fileStatusText();
+  document.getElementById('fileStatusNR').textContent = txt;
+  document.getElementById('fileStatusRV').textContent = txt;
+  document.getElementById('headerFileStatus').textContent = workbook ? txt : '';
+  document.getElementById('btnChangeFile').style.display = workbook ? 'inline-block' : 'none';
+  document.getElementById('btnReviewCompleteNR').disabled = !workbook || role!=='Reviewer';
+  document.getElementById('btnReviewCompleteRV').disabled = !workbook || role!=='Reviewer';
+
+  const banner = document.getElementById('syncBanner');
+  if(workbook && fileHandle){
+    banner.classList.add('show');
+    updateSyncIndicator('idle');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+function updateSyncIndicator(state, detail){
+  const el = document.getElementById('syncBannerText');
+  const dot = document.querySelector('.sync-dot');
+  if(!el) return;
+  if(state === 'idle'){
+    el.textContent = lastSyncSuccess
+      ? `Live sync active — last synced ${Math.max(0, Math.round((Date.now()-lastSyncSuccess)/1000))}s ago`
+      : 'Live sync active — saving every 3 seconds';
+    dot.style.background = '#1D4ED8';
+  } else if(state === 'syncing'){
+    el.textContent = '🔄 Syncing to file...';
+    dot.style.background = '#1D4ED8';
+  } else if(state === 'success'){
+    el.textContent = '✅ Synced successfully';
+    dot.style.background = '#16A34A';
+  } else if(state === 'error'){
+    el.textContent = `⚠️ Sync failed — ${detail || 'check file permissions'}`;
+    dot.style.background = '#DC2626';
+  } else if(state === 'unsupported'){
+    el.textContent = '⚠️ Live sync unavailable — browser cannot write directly to this file';
+    dot.style.background = '#B8860B';
+  }
+}
+
+/* ============ SETUP MODAL ============ */
+document.getElementById('btnReviewer').onclick=()=>chooseRole('Reviewer');
+document.getElementById('btnDeveloper').onclick=()=>chooseRole('Developer');
+
+function chooseRole(r){
+  role=r;
+  document.getElementById('roleLabel').textContent='Role: '+r;
+  document.getElementById('roleConfirmLabel').textContent=r;
+
+  const reviewerBtn = document.getElementById('btnReviewer');
+  const developerBtn = document.getElementById('btnDeveloper');
+  if(r === 'Reviewer'){
+    reviewerBtn.classList.remove('secondary');
+    developerBtn.classList.add('secondary');
+  } else {
+    developerBtn.classList.remove('secondary');
+    reviewerBtn.classList.add('secondary');
+  }
+
+  applyRoleUI();
+  document.getElementById('fileSection').style.display='block';
+}
+
+document.getElementById('btnDownloadTemplate').onclick=downloadTemplate;
+document.getElementById('btnImportSpreadsheet').onclick=async()=>{ await openSpreadsheetFlow(); if(workbook) document.getElementById('setupModal').style.display='none'; };
+document.getElementById('btnChangeFile').onclick=()=>{ document.getElementById('setupModal').style.display='flex'; };
+function downloadTemplate(){
+  if(!checkLibLoaded()) return;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([COMMENT_COLUMNS]), 'Comments');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['ReadMeLink','']]), 'Config');
+  const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const blob=new Blob([out],{type:'application/octet-stream'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='video-review-template.xlsx'; a.click();
+}
+
+/* ============ ROLE-GATED UI ============ */
+function applyRoleUI(){
+  const isDev=role==='Developer';
+  document.getElementById('addCommentCardNR').style.display=isDev?'none':'block';
+  document.getElementById('devNoteNR').style.display=isDev?'block':'none';
+  document.getElementById('addCommentCardRV').style.display=isDev?'none':'block';
+  document.getElementById('devNoteRV').style.display=isDev?'block':'none';
+  document.getElementById('btnQuickAction_rv').textContent=isDev?'Mark Fixed by NIIT':'Approve Fix';
+  dashSub=isDev?'developer':'reviewer';
+  document.querySelectorAll('.subtabs button').forEach(b=>b.classList.toggle('active', b.dataset.sub===dashSub));
+  document.querySelectorAll('.subview').forEach(v=>v.classList.toggle('active', v.id==='sub-'+dashSub));
+  renderCommentsTable();
+}
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tabs > button').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tabs > button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='dashboard') renderDashboard();
+    if(btn.dataset.tab==='validations') resetValidationsToAll();
+  };
+});
+document.querySelectorAll('.subtabs button').forEach(btn=>{
+  btn.onclick=()=>{
+    dashSub=btn.dataset.sub;
+    document.querySelectorAll('.subtabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
+    document.getElementById('sub-'+dashSub).classList.add('active');
+    renderDashboard();
+  };
+});
+function resetValidationsToAll(){
+  document.getElementById('rvFilterApp').value='';
+  refreshVideoFilter('rv');
+  document.getElementById('rvFilterVideo').value='';
+  rvVideoKey=null; rvCurrentCommentId=null;
+  loadVideoInto('rv', null);
+  renderCommentsTable();
+}
+
+/* ============ SPREADSHEET OPEN / SAVE ============ */
+async function openSpreadsheetFlow(){
+  if(!checkLibLoaded()) return;
+  try{
+    let file;
+    if(window.showOpenFilePicker){
+      let handles;
+      try{ handles=await window.showOpenFilePicker({types:[{description:'Excel', accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]}); }
+      catch(e){ return; }
+      fileHandle=handles[0]; file=await fileHandle.getFile();
+    } else {
+      file=await new Promise(resolve=>{
+        const input=document.createElement('input'); input.type='file'; input.accept='.xlsx';
+        input.onchange=()=>resolve(input.files[0]); input.click();
+      });
+      fileHandle=null; if(!file) return;
+    }
+    await loadWorkbookFromFile(file);
+    checkAndSetLock();
+    startHeartbeat();
+    refreshFileStatus();
+    const appCount=[...new Set(comments.map(c=>c.Application).filter(Boolean))].length;
+    alert(`Spreadsheet loaded successfully.\n\nApplications: ${appCount}\nComments: ${comments.length}\n\n${fileHandle ? 'Live sync is now active — changes save automatically every 3 seconds.' : 'Note: live sync unavailable in this mode. Use Review Complete to download your changes.'}`);
+  }catch(e){ console.error(e); alert('Could not read the spreadsheet.\n\n'+(e.message||e)); }
+}
+async function loadWorkbookFromFile(file){
+  const buf=await file.arrayBuffer();
+  workbook=XLSX.read(buf,{type:'array', cellDates:true});
+  loadCommentsSheet(); loadConfigSheet(); refreshFilters(); renderDashboard();
+}
+function loadCommentsSheet(){
+  let ws=workbook.Sheets['Comments'];
+  if(!ws){ ws=XLSX.utils.aoa_to_sheet([COMMENT_COLUMNS]); workbook.SheetNames.push('Comments'); workbook.Sheets['Comments']=ws; comments=[]; return; }
+  comments=XLSX.utils.sheet_to_json(ws,{defval:''});
+  comments.forEach(c=>{
+    if(c.FollowUpNotes===undefined) c.FollowUpNotes='';
+    if(c.ScreenshotDataUrl===undefined) c.ScreenshotDataUrl='';
+    if((!c.Application||String(c.Application).trim()==='') && c.VideoName){
+      const p=parseAppFromVideoName(String(c.VideoName)); c.Application=p?p.app:'UnknownApp';
+    }
+    if(c.Timestamp===undefined||c.Timestamp===''||isNaN(Number(c.Timestamp))) c.Timestamp=c.TimestampDisplay?parseTimeFlexible(c.TimestampDisplay):0;
+    else c.Timestamp=Number(c.Timestamp)||0;
+    c.TimestampDisplay=fmtTime(c.Timestamp);
+  });
+}
+function loadConfigSheet(){
+  config={};
+  const ws=workbook.Sheets['Config'];
+  if(ws) XLSX.utils.sheet_to_json(ws,{header:1}).forEach(r=>{ if(r[0]) config[r[0]]=r[1]; });
+}
+function writeCommentsBack(){
+  comments.forEach(c=>{ c.TimestampDisplay=fmtTime(c.Timestamp); });
+  const ws=XLSX.utils.json_to_sheet(comments,{header:COMMENT_COLUMNS});
+  workbook.Sheets['Comments']=ws;
+  if(!workbook.SheetNames.includes('Comments')) workbook.SheetNames.push('Comments');
+}
+async function saveWorkbook(){
+  if(!workbook) return;
+  writeCommentsBack(); writeLockSheet();
+  const out=XLSX.write(workbook,{bookType:'xlsx',type:'array'});
+  if(fileHandle){
+    const w=await fileHandle.createWritable();
+    await w.write(out);
+    await w.close();
+  } else {
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tracker.xlsx'; a.click();
+  }
+}
+async function reviewCompleteFlow(){
+  if(!workbook){ alert('Load a spreadsheet first.'); return; }
+  if(!confirm('Mark review complete and stamp this in the spreadsheet now?')) return;
+  config.ReviewCompletedAt=nowIso(); config.ReviewCompletedBy=role;
+  workbook.Sheets['Config']=XLSX.utils.aoa_to_sheet(Object.entries(config));
+  if(!workbook.SheetNames.includes('Config')) workbook.SheetNames.push('Config');
+  try{
+    await saveWorkbook();
+    lastSyncSuccess = Date.now();
+    updateSyncIndicator('success');
+  }catch(e){
+    updateSyncIndicator('error', e.message);
+  }
+  stopMicNow();
+  alert('Review completion stamped and synced.');
+}
+document.getElementById('btnReviewCompleteNR').onclick=reviewCompleteFlow;
+document.getElementById('btnReviewCompleteRV').onclick=reviewCompleteFlow;
+function writeLockSheet(){
+  workbook.Sheets['_Lock']=XLSX.utils.aoa_to_sheet([['SessionId',sessionId],['LockedBy',role||'Unknown'],['Timestamp',nowIso()]]);
+  if(!workbook.SheetNames.includes('_Lock')) workbook.SheetNames.push('_Lock');
+}
+function checkAndSetLock(){
+  try{
+    const ws=workbook.Sheets['_Lock'];
+    if(ws){
+      const map={}; XLSX.utils.sheet_to_json(ws,{header:1}).forEach(r=>map[r[0]]=r[1]);
+      const age=(Date.now()-new Date(map.Timestamp||0).getTime())/60000;
+      if(map.SessionId && map.SessionId!==sessionId && age<10){
+        const bar=document.getElementById('lockBar'); bar.style.display='block';
+        bar.textContent=`Note: file may be in use by "${map.LockedBy}" (${age.toFixed(1)} min ago). Live sync reduces but does not eliminate the risk of overwriting their changes.`;
+      }
+    }
+  }catch(e){}
+}
+
+/* ===== LIVE SYNC: every 3 seconds ===== */
+function startHeartbeat(){
+  if(heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(async ()=>{
+    if(!workbook) return;
+    if(userIsTyping) return;                 // don't interrupt active typing
+    if(!fileHandle){ updateSyncIndicator('unsupported'); return; } // only works with real fileHandle
+    if(syncInProgress) return;                // avoid overlapping writes
+
+    syncInProgress = true;
+    updateSyncIndicator('syncing');
+    try{
+      await saveWorkbook();
+      lastSyncSuccess = Date.now();
+      updateSyncIndicator('success');
+      setTimeout(()=>{ if(!syncInProgress) updateSyncIndicator('idle'); }, 1200);
+    }catch(e){
+      console.warn('Live sync failed:', e);
+      updateSyncIndicator('error', e.message);
+    }finally{
+      syncInProgress = false;
+    }
+  }, 3000); // 3-SECOND LIVE SYNC
+}
+
+/* ============ MIC PERMISSION ============ */
+document.getElementById('btnStopMicBar').onclick=()=>{
+  ['nr','rv'].forEach(p=>{ recognitionActive[p]=false; });
+  if(recognition) recognition.stop();
+  stopMicNow();
+};
+async function ensureMicPermission(){
+  if(micPermissionGranted) return true;
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    micPermissionGranted=true; stream.getTracks().forEach(t=>t.stop());
+    return true;
+  }catch(e){ alert('Microphone permission was denied.'); return false; }
+}
+function showMicBar(){ document.getElementById('micBar').classList.add('active'); }
+function stopMicNow(){ document.getElementById('micBar').classList.remove('active'); }
+
+/* ============ SCREENSHOT ============ */
+function captureFrameThumbnail(player){
+  if(!player||!player.videoWidth) return '';
+  let width=160, quality=0.6;
+  for(let i=0;i<6;i++){
+    const h=Math.max(1, Math.round(player.videoHeight*(width/player.videoWidth)));
+    const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=h;
+    canvas.getContext('2d').drawImage(player,0,0,width,h);
+    const dataUrl=canvas.toDataURL('image/jpeg', quality);
+    if(dataUrl.length<=30000) return dataUrl;
+    width=Math.round(width*0.8); quality=Math.max(0.3,quality-0.1);
+  }
+  return '';
+}
+
+/* ============ VIDEO FILE ASSIGNMENT ============ */
+function browseVideoForDropdown(prefix){
+  const key=document.getElementById(prefix+'FilterVideo').value;
+  if(!key){ alert('Select a video first.'); return; }
+  const [app,vid]=key.split('|');
+  const input=document.createElement('input'); input.type='file'; input.accept='video/*';
+  input.onchange=()=>{
+    const f=input.files[0]; if(!f) return;
+    if(videoFiles[key]) URL.revokeObjectURL(videoFiles[key].url);
+    videoFiles[key]={file:f,url:URL.createObjectURL(f)};
+    refreshFilters(); renderDashboard(); loadVideoInto(prefix,key);
+  };
+  input.click();
+}
+document.getElementById('rvBrowseVideo').onclick=()=>browseVideoForDropdown('rv');
+function browseVideoDirect(prefix){
+  const input=document.createElement('input'); input.type='file'; input.accept='video/*';
+  input.onchange=()=>{
+    const f=input.files[0]; if(!f) return;
+    const nameNoExt=f.name.replace(/\.[^.]+$/,'');
+    let app,vid; const parsed=parseAppFromVideoName(nameNoExt);
+    if(parsed){ app=parsed.app; vid=parsed.vid; }
+    else { app=prompt('Enter Application name:','')||'UnknownApp'; vid=prompt('Enter Video name:',nameNoExt)||nameNoExt; }
+    const key=videoKey(app,vid);
+    if(videoFiles[key]) URL.revokeObjectURL(videoFiles[key].url);
+    videoFiles[key]={file:f,url:URL.createObjectURL(f)};
+    refreshFilters(); renderDashboard();
+    document.getElementById(prefix+'FilterApp').value=app; refreshVideoFilter(prefix);
+    document.getElementById(prefix+'FilterVideo').value=key;
+    nrVideoKey=key; loadVideoInto(prefix,key);
+  };
+  input.click();
+}
+document.getElementById('nrBrowseVideo').onclick=()=>browseVideoDirect('nr');
+
+/* ============ FILTERS ============ */
+function refreshFilters(){
+  const apps=[...new Set(comments.map(c=>c.Application).filter(Boolean).concat(Object.keys(videoFiles).map(k=>k.split('|')[0])))];
+  ['nr','rv'].forEach(prefix=>{
+    const sel=document.getElementById(prefix+'FilterApp'); const prev=sel.value;
+    sel.innerHTML='<option value="">All Applications</option>'+apps.map(a=>`<option value="${a}">${a}</option>`).join('');
+    sel.value=prev;
+    sel.onchange=()=>{ refreshVideoFilter(prefix); if(prefix==='rv'){ rvVideoKey=null; loadVideoInto('rv',null); renderCommentsTable(); } };
+    refreshVideoFilter(prefix);
+  });
+  document.getElementById('nrFilterVideo').onchange=()=>{ nrVideoKey=document.getElementById('nrFilterVideo').value||null; loadVideoInto('nr',nrVideoKey); };
+  document.getElementById('rvFilterVideo').onchange=()=>{ rvVideoKey=document.getElementById('rvFilterVideo').value||null; rvCurrentCommentId=null; loadVideoInto('rv',rvVideoKey); renderCommentsTable(); };
+  document.getElementById('rvFilterStatus').onchange=renderCommentsTable;
+}
+function refreshVideoFilter(prefix){
+  const app=document.getElementById(prefix+'FilterApp').value;
+  const allKeys=new Set([...comments.map(c=>videoKey(c.Application,c.VideoName)), ...Object.keys(videoFiles)]);
+  const vids=[...allKeys].filter(k=>!app||k.startsWith(app+'|'));
+  const sel=document.getElementById(prefix+'FilterVideo'); const prev=sel.value;
+  const allLabel=prefix==='rv'?'All Videos':'Select a Video';
+  sel.innerHTML=`<option value="">${allLabel}</option>`+vids.map(k=>`<option value="${k}">${k.split('|')[1]}</option>`).join('');
+  sel.value=prev;
+}
+function loadVideoInto(prefix,key){
+  const player=document.getElementById('player_'+prefix);
+  if(key&&videoFiles[key]) player.src=videoFiles[key].url; else player.removeAttribute('src');
+  if(prefix==='nr') renderNrRecentTable();
+  const fullEl = document.getElementById('currentCommentFull_'+prefix);
+  if(fullEl) fullEl.textContent = 'Use Prev/Next to view a comment here.';
+}
+
+/* ============ COMMENT CAPTURE + VOICE RECORDING ============ */
+function wireCommentCapture(prefix){
+  const box = document.getElementById('commentBox_'+prefix);
+  const player = document.getElementById('player_'+prefix);
+
+  box.addEventListener('focus', ()=>{
+    if(role!=='Reviewer'||!player.src) return;
+    player.pause();
+    const ts = player.currentTime, shot = captureFrameThumbnail(player);
+    pendingCaptures[prefix] = {timestamp: ts, frame: Math.round(ts*DEFAULT_FPS), screenshot: shot};
+    document.getElementById('pendingMeta_'+prefix).innerHTML =
+      `Captured at ${fmtTime(ts)}` + (shot ? `<br><img src="${shot}" class="thumb">` : '');
+  });
+
+  function startRecognitionInstance(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    rec.onresult = (e)=>{
+      let interim = '';
+      for(let i=e.resultIndex; i<e.results.length; i++){
+        const chunk = e.results[i][0].transcript;
+        if(e.results[i].isFinal) finalTranscripts[prefix] += chunk + ' ';
+        else interim += chunk;
+      }
+      box.value = finalTranscripts[prefix] + interim;
+    };
+    rec.onerror = (e)=>{ console.warn('Speech recognition error ('+prefix+'):', e.error); };
+    rec.onend = ()=>{
+      if(recognitionActive[prefix]){
+        try{ recognition = startRecognitionInstance(); recognition.start(); }
+        catch(err){ console.warn('Auto-restart failed:', err); finishStop(prefix); }
+      } else {
+        finishStop(prefix);
+      }
+    };
+    return rec;
+  }
+
+  function clearTimers(p){
+    if(recordingTimers[p]){ clearTimeout(recordingTimers[p]); recordingTimers[p]=null; }
+    if(countdownIntervals[p]){ clearInterval(countdownIntervals[p]); countdownIntervals[p]=null; }
+  }
+  function finishStop(p){
+    clearTimers(p);
+    document.getElementById('btnStartRec_'+p).disabled = false;
+    document.getElementById('btnStopRec_'+p).disabled = true;
+    stopMicNow();
+  }
+  function stopRecordingNow(p, reason){
+    recognitionActive[p] = false;
+    if(recognition){ recognition.stop(); }
+    if(reason === 'timeout'){
+      document.getElementById('micBarLabel').textContent = 'Recording stopped automatically after 2 minutes.';
+    }
+  }
+
+  document.getElementById('btnStartRec_'+prefix).onclick = async ()=>{
+    if(role!=='Reviewer') return;
+    if(!player.src){ alert('Browse/select a video first.'); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ alert('Speech recognition not supported in this browser.'); return; }
+
+    player.pause();
+    const ts = player.currentTime, shot = captureFrameThumbnail(player);
+    pendingCaptures[prefix] = {timestamp: ts, frame: Math.round(ts*DEFAULT_FPS), screenshot: shot};
+    document.getElementById('pendingMeta_'+prefix).innerHTML =
+      `Captured at ${fmtTime(ts)}` + (shot ? `<br><img src="${shot}" class="thumb">` : '');
+
+    const ok = await ensureMicPermission();
+    if(!ok) return;
+
+    finalTranscripts[prefix] = box.value ? box.value + ' ' : '';
+    recognitionActive[prefix] = true;
+
+    showMicBar();
+    document.getElementById('btnStartRec_'+prefix).disabled = true;
+    document.getElementById('btnStopRec_'+prefix).disabled = false;
+
+    recognition = startRecognitionInstance();
+    recognition.start();
+
+    const startTime = Date.now();
+    document.getElementById('micBarLabel').textContent = 'Recording... speak now (auto-stops in 02:00)';
+    countdownIntervals[prefix] = setInterval(()=>{
+      const remainingMs = Math.max(0, MAX_RECORDING_MS - (Date.now()-startTime));
+      const remainingSec = Math.ceil(remainingMs/1000);
+      const mm = String(Math.floor(remainingSec/60)).padStart(2,'0');
+      const ss = String(remainingSec%60).padStart(2,'0');
+      document.getElementById('micBarLabel').textContent = `Recording... speak now (auto-stops in ${mm}:${ss})`;
+    }, 1000);
+
+    recordingTimers[prefix] = setTimeout(()=>{
+      stopRecordingNow(prefix, 'timeout');
+      document.getElementById('btnStartRec_'+prefix).disabled = false;
+      document.getElementById('btnStopRec_'+prefix).disabled = true;
+    }, MAX_RECORDING_MS);
+  };
+
+  document.getElementById('btnStopRec_'+prefix).onclick = ()=>{
+    if(role!=='Reviewer') return;
+    clearTimers(prefix);
+    stopRecordingNow(prefix, 'manual');
+    document.getElementById('btnStartRec_'+prefix).disabled = false;
+    document.getElementById('btnStopRec_'+prefix).disabled = true;
+  };
+
+  document.getElementById('btnAddComment_'+prefix).onclick = ()=>{
+    if(role!=='Reviewer'){
+      alert('Developers cannot add new comments. You may only mark "Fixed by NIIT" and add Follow-up Notes on existing comments in Review Validations.');
+      return;
+    }
+    const key = prefix==='nr' ? nrVideoKey : rvVideoKey;
+    if(!key){ alert('Browse/select a video first.'); return; }
+    if(!box.value.trim()){ alert('Enter or speak a comment.'); return; }
+    if(!pendingCaptures[prefix]){ alert('Click inside the comment box first.'); return; }
+    const [app, vid] = key.split('|'); const cap = pendingCaptures[prefix];
+    comments.push({CommentID:uid(), Application:app, VideoName:vid, Timestamp:cap.timestamp, TimestampDisplay:fmtTime(cap.timestamp),
+      Frame:cap.frame, CommentText:box.value.trim(), InputType: finalTranscripts[prefix].trim() ? 'Voice':'Text', CreatedBy:role, CreatedAt:nowIso(),
+      FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'No', FollowUpNotes:'', ScreenshotDataUrl:cap.screenshot||''});
+    box.value=''; pendingCaptures[prefix]=null; finalTranscripts[prefix]='';
+    document.getElementById('pendingMeta_'+prefix).innerHTML='';
+    if(prefix==='nr') renderNrRecentTable();
+    renderCommentsTable(); renderDashboard();
+  };
+}
+wireCommentCapture('nr'); wireCommentCapture('rv');
+
+function renderNrRecentTable(){
+  const tbody=document.getElementById('nrRecentTable'); tbody.innerHTML='';
+  if(!nrVideoKey) return;
+  const [app,vid]=nrVideoKey.split('|');
+  comments.filter(c=>c.Application===app&&c.VideoName===vid).sort((a,b)=>b.Timestamp-a.Timestamp).slice(0,8).forEach(c=>{
+    const tr=document.createElement('tr');
+    const shot=c.ScreenshotDataUrl?`<img src="${c.ScreenshotDataUrl}" class="thumb" onclick="openLightbox('${c.ScreenshotDataUrl}')">`:'';
+    tr.innerHTML=`<td>${fmtTime(c.Timestamp)}</td><td>${shot}</td><td>${c.CommentText}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============ PREV/NEXT + QUICK ACTION ============ */
+function wireNav(prefix){
+  document.getElementById('btnPrev_'+prefix).onclick=()=>jumpIssue(prefix,-1);
+  document.getElementById('btnNext_'+prefix).onclick=()=>jumpIssue(prefix,1);
+  document.getElementById('player_'+prefix).addEventListener('timeupdate',()=>{
+    const el=document.getElementById('curTimeLabel_'+prefix);
+    if(el) el.textContent=fmtTime(document.getElementById('player_'+prefix).currentTime);
+  });
+}
+function getVideoComments(key){
+  if(!key) return [];
+  const [app,vid]=key.split('|');
+  return comments.filter(c=>c.Application===app&&c.VideoName===vid).sort((a,b)=>a.Timestamp-b.Timestamp);
+}
+function jumpIssue(prefix,dir){
+  const key=prefix==='nr'?nrVideoKey:rvVideoKey; if(!key) return;
+  const player=document.getElementById('player_'+prefix); const rows=getVideoComments(key);
+  if(!rows.length) return;
+  const cur=player.currentTime; let target;
+  if(dir<0) target=[...rows].reverse().find(c=>c.Timestamp<cur-0.5)??rows[rows.length-1];
+  else target=rows.find(c=>c.Timestamp>cur+0.5)??rows[0];
+  player.currentTime=target.Timestamp; player.pause();
+
+  const fullEl = document.getElementById('currentCommentFull_'+prefix);
+  if(fullEl){
+    fullEl.innerHTML = `<b>${fmtTime(target.Timestamp)}</b> — ${target.CommentText}`;
+  }
+
+  if(prefix==='rv'){
+    rvCurrentCommentId=target.CommentID;
+    updateCurrentIssueLabel();
+  }
+}
+wireNav('nr'); wireNav('rv');
+function updateCurrentIssueLabel(){
+  const el=document.getElementById('currentIssueLabel_rv');
+  const c=comments.find(x=>x.CommentID===rvCurrentCommentId);
+  if(el){
+    el.textContent = c ? `Viewing: ${fmtTime(c.Timestamp)}` : 'Use Prev/Next or click a timestamp.';
+  }
+  const fullEl = document.getElementById('currentCommentFull_rv');
+  if(fullEl){
+    fullEl.innerHTML = c ? `<b>${fmtTime(c.Timestamp)}</b> — ${c.CommentText}` : 'Use Prev/Next to view a comment here.';
+  }
+}
+document.getElementById('btnQuickAction_rv').onclick=()=>{
+  const c=comments.find(x=>x.CommentID===rvCurrentCommentId);
+  if(!c){ alert('Select an issue first.'); return; }
+  if(role==='Developer') c.FixedByNIIT='Yes';
+  else if(role==='Reviewer'){
+    if(c.FixedByNIIT!=='Yes' && !confirm('Not yet marked Fixed by NIIT. Approve anyway?')) return;
+    c.ApprovedByReviewer='Yes';
+  }
+  renderCommentsTable(); renderDashboard(); updateCurrentIssueLabel();
+};
+
+/* ============ STATUS HELPERS ============ */
+function statusOf(c){ if(c.ApprovedByReviewer==='Yes') return 'approved'; if(c.FixedByNIIT==='Yes') return 'fixed'; return 'open'; }
+function computeVideoStatus(app,vid){
+  const rows=comments.filter(c=>c.Application===app&&c.VideoName===vid);
+  if(!rows.length) return {total:0,status:'no-comments'};
+  const fixed=rows.filter(c=>c.FixedByNIIT==='Yes').length, approved=rows.filter(c=>c.ApprovedByReviewer==='Yes').length;
+  const status=approved===rows.length?'signedoff':fixed===rows.length?'readyReviewer':'readyDeveloper';
+  return {total:rows.length, fixed, approved, status};
+}
+function getAllVideoStatuses(){
+  const apps=[...new Set(comments.map(c=>c.Application).concat(Object.keys(videoFiles).map(k=>k.split('|')[0])))].filter(Boolean);
+  const all=[];
+  apps.forEach(app=>{
+    const vids=[...new Set(comments.filter(c=>c.Application===app).map(c=>c.VideoName).concat(Object.keys(videoFiles).filter(k=>k.startsWith(app+'|')).map(k=>k.split('|')[1])))];
+    vids.forEach(v=>all.push({app,v,s:computeVideoStatus(app,v)}));
+  });
+  return all;
+}
+function computeAppSummary(app, allStatuses){
+  const vids = allStatuses.filter(x=>x.app===app);
+  return {
+    total: vids.length,
+    readyDeveloper: vids.filter(x=>x.s.status==='readyDeveloper').length,
+    readyReviewer: vids.filter(x=>x.s.status==='readyReviewer').length,
+    signedoff: vids.filter(x=>x.s.status==='signedoff').length,
+    noComments: vids.filter(x=>x.s.status==='no-comments').length
+  };
+}
+function appSummaryBadgesHtml(summary){
+  let html = '<div class="app-counts">';
+  if(summary.readyDeveloper>0) html += `<span class="badge b-developer">${summary.readyDeveloper} Dev</span>`;
+  if(summary.readyReviewer>0) html += `<span class="badge b-reviewer">${summary.readyReviewer} Reviewer</span>`;
+  if(summary.signedoff>0) html += `<span class="badge b-signedoff">${summary.signedoff} Signed Off</span>`;
+  if(summary.noComments>0) html += `<span class="badge b-none">${summary.noComments} No comments</span>`;
+  html += '</div>';
+  return html;
+}
+
+/* ============ EXPAND/COLLAPSE (default collapsed) ============ */
+function toggleApp(appKey){
+  if(expandedApps.has(appKey)) expandedApps.delete(appKey); else expandedApps.add(appKey);
+  renderDashboard(); renderCommentsTable();
+}
+function toggleVideo(vidKey){
+  if(expandedVideos.has(vidKey)) expandedVideos.delete(vidKey); else expandedVideos.add(vidKey);
+  renderDashboard(); renderCommentsTable();
+}
+window.toggleApp=toggleApp; window.toggleVideo=toggleVideo;
+function expandAllApps(appKeys){ appKeys.forEach(k=>expandedApps.add(k)); renderDashboard(); renderCommentsTable(); }
+function collapseAllApps(appKeys){ appKeys.forEach(k=>expandedApps.delete(k)); expandedVideos.clear(); renderDashboard(); renderCommentsTable(); }
+window.expandAllApps=expandAllApps; window.collapseAllApps=collapseAllApps;
+
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  if(dashSub==='reviewer') renderReviewerDash();
+  else if(dashSub==='developer') renderDeveloperDash();
+  else renderOverviewDash();
+}
+function renderRoleDash(containerId, filterFn, actionLabel, actionHandlerName){
+  const allStatuses = getAllVideoStatuses();
+  const visibleVideos = allStatuses.filter(filterFn);
+  const apps = [...new Set(visibleVideos.map(x=>x.app))];
+  const el = document.getElementById(containerId);
+  if(!apps.length){ el.innerHTML = '<p class="note">Nothing here right now.</p>'; return; }
+
+  const appKeys = apps.map(app => 'dash_'+containerId+'_'+app);
+  const controls = `<div class="group-controls">
+    <button class="secondary" onclick='expandAllApps(${JSON.stringify(appKeys)})'>Expand All</button>
+    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(appKeys)})'>Collapse All</button>
+  </div>`;
+
+  const groupsHtml = apps.map(app=>{
+    const appKey = 'dash_'+containerId+'_'+app;
+    const isCollapsed = !expandedApps.has(appKey);
+    const summary = computeAppSummary(app, allStatuses);
+    const videosForApp = visibleVideos.filter(x=>x.app===app);
+    const videoRows = videosForApp.map(({v,s})=>`
+      <div class="dash-card" style="margin-bottom:8px;">
+        <div class="dash-card-title">${v}</div>
+        <span class="badge ${s.status==='readyDeveloper'?'b-developer':'b-reviewer'}">${s.status==='readyDeveloper'?'Ready for Developer':'Ready for Reviewer'}</span>
+        <p class="note">${s.total} comment(s) • ${s.fixed} fixed • ${s.approved} approved</p>
+        <div class="dash-card-actions"><button onclick="${actionHandlerName}('${app}','${v}')">${actionLabel}</button></div>
+      </div>`).join('');
+    return `
+      <div class="app-group">
+        <div class="app-header ${isCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
+          <span class="chevron">▼</span><span class="app-name">${app}</span>${appSummaryBadgesHtml(summary)}
+        </div>
+        <div class="app-body ${isCollapsed?'collapsed':''}">${videoRows}</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = controls + groupsHtml;
+}
+function renderReviewerDash(){
+  renderRoleDash('reviewerDashContent', x=>x.s.status==='readyReviewer', 'Validate Fixes', 'openVideoIn_validations');
+}
+function renderDeveloperDash(){
+  renderRoleDash('developerDashContent', x=>x.s.status==='readyDeveloper', 'Fix Issues', 'openVideoIn_validations');
+}
+function openVideoIn_validations(app,vid){ openVideoIn('validations', app, vid); }
+window.openVideoIn_validations = openVideoIn_validations;
+
+function buildMultiselect(id, options, onChange){
+  const box=document.getElementById(id);
+  box.innerHTML=options.map(o=>`<label><input type="checkbox" value="${o}" checked> ${o}</label>`).join('');
+  box.querySelectorAll('input').forEach(cb=>cb.onchange=onChange);
+}
+function getCheckedValues(id){ return [...document.querySelectorAll('#'+id+' input:checked')].map(cb=>cb.value); }
+
+function renderOverviewDash(){
+  const all=getAllVideoStatuses();
+  const apps=[...new Set(all.map(x=>x.app))];
+  if(!document.getElementById('msAppFilter').dataset.built){
+    buildMultiselect('msAppFilter', apps, renderOverviewDash);
+    document.getElementById('msAppFilter').dataset.built='1';
+    document.querySelectorAll('#msStatusFilter input').forEach(cb=>cb.onchange=renderOverviewDash);
+  }
+  const selectedApps=getCheckedValues('msAppFilter');
+  const selectedStatuses=getCheckedValues('msStatusFilter');
+  const filtered=all.filter(x=>selectedApps.includes(x.app) && selectedStatuses.includes(x.s.status));
+
+  document.getElementById('overviewStatBar').innerHTML=`
+    <div class="stat"><div class="num">${apps.length}</div><div class="note">Total Applications</div></div>
+    <div class="stat"><div class="num">${all.length}</div><div class="note">Total Videos</div></div>
+    <div class="stat"><div class="num">${filtered.length}</div><div class="note">Matching current filters</div></div>`;
+
+  const grouped={};
+  filtered.forEach(x=>{ (grouped[x.app]=grouped[x.app]||[]).push(x); });
+  const el=document.getElementById('overviewContent');
+  if(!Object.keys(grouped).length){ el.innerHTML='<p class="note">No videos match the current filters.</p>'; return; }
+
+  const appKeys = Object.keys(grouped).map(app=>'overview_'+app);
+  const controls = `<div class="group-controls">
+    <button class="secondary" onclick='expandAllApps(${JSON.stringify(appKeys)})'>Expand All</button>
+    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(appKeys)})'>Collapse All</button>
+  </div>`;
+
+  const groupsHtml = Object.entries(grouped).map(([app, items])=>{
+    const appKey = 'overview_'+app;
+    const isCollapsed = !expandedApps.has(appKey);
+    const summary = computeAppSummary(app, all);
+    const videoRows = items.map(({v,s})=>{
+      const label=s.status==='signedoff'?'Signed Off':s.status==='readyReviewer'?'Ready for Reviewer':s.status==='readyDeveloper'?'Ready for Developer':'No comments';
+      const cls=s.status==='signedoff'?'b-signedoff':s.status==='readyReviewer'?'b-reviewer':s.status==='readyDeveloper'?'b-developer':'b-none';
+      return `<div class="dash-card" style="margin-bottom:8px;">
+        <div class="dash-card-title">${v}</div>
+        <span class="badge ${cls}">${label}</span>
+        <p class="note">${s.total} comment(s) • ${s.fixed||0} fixed • ${s.approved||0} approved</p>
+      </div>`;
+    }).join('');
+    return `
+      <div class="app-group">
+        <div class="app-header ${isCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
+          <span class="chevron">▼</span>
+          <span class="app-name">${app} (${items.length} video${items.length!==1?'s':''})</span>
+          ${appSummaryBadgesHtml(summary)}
+        </div>
+        <div class="app-body ${isCollapsed?'collapsed':''}">${videoRows}</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = controls + groupsHtml;
+}
+
+function rollbackVideo(app,vid){
+  if(role!=='Reviewer') return;
+  if(!confirm(`Rollback sign-off for ${app} / ${vid}?`)) return;
+  comments.filter(c=>c.Application===app&&c.VideoName===vid).forEach(c=>c.ApprovedByReviewer='No');
+  renderDashboard(); renderCommentsTable();
+}
+function openVideoIn(tab,app,vid){
+  document.querySelector(`.tabs > button[data-tab="${tab}"]`).click();
+  const prefix=tab==='newreview'?'nr':'rv';
+  document.getElementById(prefix+'FilterApp').value=app; refreshVideoFilter(prefix);
+  document.getElementById(prefix+'FilterVideo').value=videoKey(app,vid);
+  if(prefix==='nr'){ nrVideoKey=videoKey(app,vid); loadVideoInto('nr',nrVideoKey); }
+  else { rvVideoKey=videoKey(app,vid); rvCurrentCommentId=null; loadVideoInto('rv',rvVideoKey); renderCommentsTable(); }
+}
+window.rollbackVideo=rollbackVideo;
+window.openVideoIn=openVideoIn;
+
+/* ============ REVIEW VALIDATIONS: GROUPED COMMENTS ============ */
+function roleBlockedChange(sel,revert,msg){ alert(msg); sel.value=revert; }
+function buildCommentRowHtml(c){
+  const shot=c.ScreenshotDataUrl?`<img src="${c.ScreenshotDataUrl}" class="thumb" onclick="openLightbox('${c.ScreenshotDataUrl}')">`:'';
+  return `<tr data-id="${c.CommentID}">
+    <td><a href="#" class="jumpTime" data-app="${c.Application}" data-vid="${c.VideoName}" data-t="${c.Timestamp}" data-id="${c.CommentID}">${fmtTime(c.Timestamp)}</a></td>
+    <td>${shot}</td>
+    <td class="commentTextCell">${c.CommentText}${c.AutoDetected==='Yes'?' <span class="badge b-developer">auto</span>':''}</td>
+    <td>${c.InputType}</td>
+    <td class="fixedCell"></td><td class="apprCell"></td><td class="notesCell"></td><td class="actCell"></td>
+  </tr>`;
+}
+function renderCommentsTable(){
+  const isDev=role==='Developer', noVideo=!rvVideoKey;
+  document.getElementById('rvDevPrompt').style.display=(isDev&&noVideo)?'block':'none';
+  document.getElementById('rvPlayerWrap').style.display=(isDev&&noVideo)?'none':'flex';
+  document.getElementById('activeTableCard').style.display=(isDev&&noVideo)?'none':'block';
+  updateCurrentIssueLabel();
+  if(isDev&&noVideo){ document.getElementById('groupedCommentsContainer').innerHTML=''; renderSignedOffTable(); return; }
+
+  const appFilter=document.getElementById('rvFilterApp').value;
+  const videoFilterKey=document.getElementById('rvFilterVideo').value;
+  const statusFilter=document.getElementById('rvFilterStatus').value;
+
+  const byVideo={};
+  comments.forEach(c=>{ const key=videoKey(c.Application,c.VideoName); (byVideo[key]=byVideo[key]||[]).push(c); });
+
+  const appMap = {};
+  Object.entries(byVideo).forEach(([key, rows])=>{
+    const [app, vid] = key.split('|');
+    if(appFilter && app!==appFilter) return;
+    if(videoFilterKey && key!==videoFilterKey) return;
+    const s = computeVideoStatus(app, vid);
+    if(s.status === 'signedoff') return;
+    const filteredRows = rows.filter(c=> statusFilter==='all' || statusOf(c)===statusFilter);
+    if(!filteredRows.length) return;
+    filteredRows.sort((a,b)=>a.Timestamp-b.Timestamp);
+    (appMap[app] = appMap[app] || {}) [vid] = {rows: filteredRows, status: s};
+  });
+
+  const allStatuses = getAllVideoStatuses();
+  const container = document.getElementById('groupedCommentsContainer');
+  const appNames = Object.keys(appMap).sort();
+  if(!appNames.length){ container.innerHTML = '<p class="note">No active comments match the current filters.</p>'; renderSignedOffTable(); return; }
+
+  const rvAppKeys = appNames.map(app=>'rv_app_'+app);
+  const controls = `<div class="group-controls">
+    <button class="secondary" onclick='expandAllApps(${JSON.stringify(rvAppKeys)})'>Expand All</button>
+    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(rvAppKeys)})'>Collapse All</button>
+  </div>`;
+
+  const groupsHtml = appNames.map(app=>{
+    const appKey = 'rv_app_'+app;
+    const isAppCollapsed = !expandedApps.has(appKey);
+    const summary = computeAppSummary(app, allStatuses);
+    const videoNames = Object.keys(appMap[app]).sort();
+    const videoBlocks = videoNames.map(vid=>{
+      const vidKey = 'rv_vid_'+videoKey(app,vid);
+      const isVidCollapsed = !expandedVideos.has(vidKey);
+      const {rows, status} = appMap[app][vid];
+      const label = status.status==='readyDeveloper'?'Ready for Developer':'Ready for Reviewer';
+      const cls = status.status==='readyDeveloper'?'b-developer':'b-reviewer';
+      return `
+        <div class="video-group">
+          <div class="video-header ${isVidCollapsed?'collapsed':''}" onclick="toggleVideo('${vidKey}')">
+            <span class="chevron">▼</span>
+            <span class="video-name">${vid}</span>
+            <span class="badge ${cls}">${label}</span>
+            <span class="video-meta">${rows.length} comment(s)</span>
+          </div>
+          <div class="video-body ${isVidCollapsed?'collapsed':''}">
+            <table>
+              <thead><tr>
+                <th>Time</th><th>Shot</th><th>Comment</th><th>Type</th>
+                <th>Fixed by NIIT<small>Developer only</small></th>
+                <th>Approved<small>Reviewer only</small></th>
+                <th>Follow-up Notes</th><th>Actions</th>
+              </tr></thead>
+              <tbody>${rows.map(buildCommentRowHtml).join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="app-group">
+        <div class="app-header ${isAppCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
+          <span class="chevron">▼</span>
+          <span class="app-name">${app}</span>
+          ${appSummaryBadgesHtml(summary)}
+        </div>
+        <div class="app-body ${isAppCollapsed?'collapsed':''}">${videoBlocks}</div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = controls + groupsHtml;
+
+  container.querySelectorAll('tr[data-id]').forEach(tr=>{
+    const id = tr.dataset.id;
+    const c = comments.find(x=>x.CommentID===id);
+    if(!c) return;
+
+    const fixedSel=document.createElement('select'); fixedSel.innerHTML='<option>No</option><option>Yes</option>'; fixedSel.value=c.FixedByNIIT||'No';
+    fixedSel.onchange=()=>{ if(role!=='Developer'){ roleBlockedChange(fixedSel,c.FixedByNIIT||'No','Only Developers can update Fixed by NIIT.'); return; } c.FixedByNIIT=fixedSel.value; renderCommentsTable(); renderDashboard(); };
+    tr.querySelector('.fixedCell').appendChild(fixedSel);
+
+    const apprSel=document.createElement('select'); apprSel.innerHTML='<option>No</option><option>Yes</option>'; apprSel.value=c.ApprovedByReviewer||'No';
+    apprSel.onchange=()=>{ if(role!=='Reviewer'){ roleBlockedChange(apprSel,c.ApprovedByReviewer||'No','Only Reviewers can update Approved by Reviewer.'); return; } c.ApprovedByReviewer=apprSel.value; renderCommentsTable(); renderDashboard(); };
+    tr.querySelector('.apprCell').appendChild(apprSel);
+
+    const notesInput=document.createElement('input'); notesInput.type='text'; notesInput.className='followup'; notesInput.placeholder='Follow-up note...'; notesInput.value=c.FollowUpNotes||'';
+    notesInput.onchange=()=>{ c.FollowUpNotes=notesInput.value; };
+    tr.querySelector('.notesCell').appendChild(notesInput);
+
+    if(role==='Reviewer'){
+      const editBtn=document.createElement('button'); editBtn.className='secondary'; editBtn.textContent='Edit';
+      editBtn.onclick=()=>editCommentInline(tr,c);
+      const delBtn=document.createElement('button'); delBtn.className='danger'; delBtn.style.marginLeft='4px'; delBtn.textContent='Delete';
+      delBtn.onclick=()=>{ if(!confirm('Delete permanently?')) return; comments=comments.filter(x=>x.CommentID!==c.CommentID); if(rvCurrentCommentId===c.CommentID) rvCurrentCommentId=null; renderCommentsTable(); renderDashboard(); };
+      tr.querySelector('.actCell').appendChild(editBtn);
+      tr.querySelector('.actCell').appendChild(delBtn);
+    }
+  });
+  container.querySelectorAll('.jumpTime').forEach(a=>{
+    a.onclick=(e)=>{ e.preventDefault(); jumpToComment(a.dataset.app,a.dataset.vid,parseFloat(a.dataset.t),a.dataset.id); };
+  });
+
+  renderSignedOffTable();
+}
+function renderSignedOffTable(){
+  const appFilter=document.getElementById('rvFilterApp').value;
+  const videoFilterKey=document.getElementById('rvFilterVideo').value;
+  const byVideo={};
+  comments.forEach(c=>{ const key=videoKey(c.Application,c.VideoName); (byVideo[key]=byVideo[key]||[]).push(c); });
+  const signedOff=[];
+  Object.entries(byVideo).forEach(([key, rows])=>{
+    const [app,vid]=key.split('|');
+    if(appFilter && app!==appFilter) return;
+    if(videoFilterKey && key!==videoFilterKey) return;
+    const s=computeVideoStatus(app,vid);
+    if(s.status==='signedoff') signedOff.push({app,vid,s});
+  });
+  const sotbody=document.getElementById('signedOffTableBody'); sotbody.innerHTML='';
+  if(!signedOff.length){ sotbody.innerHTML='<tr><td colspan="5" class="note">No videos signed off yet.</td></tr>'; return; }
+  signedOff.forEach(({app,vid,s})=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${app}</td><td>${vid}</td><td>${s.total}</td><td>${s.approved}</td><td></td>`;
+    const viewBtn=document.createElement('button'); viewBtn.className='secondary'; viewBtn.textContent='View';
+    viewBtn.onclick=()=>{ document.getElementById('rvFilterApp').value=app; refreshVideoFilter('rv'); document.getElementById('rvFilterVideo').value=videoKey(app,vid); rvVideoKey=videoKey(app,vid); loadVideoInto('rv',rvVideoKey); renderCommentsTable(); };
+    tr.children[4].appendChild(viewBtn);
+    if(role==='Reviewer'){
+      const rb=document.createElement('button'); rb.className='danger'; rb.style.marginLeft='6px'; rb.textContent='Rollback';
+      rb.onclick=()=>rollbackVideo(app,vid);
+      tr.children[4].appendChild(rb);
+    }
+    sotbody.appendChild(tr);
+  });
+}
+function jumpToComment(app,vid,time,commentId){
+  const key=videoKey(app,vid);
+  document.getElementById('rvFilterApp').value=app; refreshVideoFilter('rv');
+  document.getElementById('rvFilterVideo').value=key;
+  const p=document.getElementById('player_rv'); rvCurrentCommentId=commentId;
+  if(rvVideoKey!==key){
+    rvVideoKey=key; loadVideoInto('rv',key);
+    const onLoaded=()=>{ p.currentTime=time; p.pause(); p.removeEventListener('loadeddata',onLoaded); updateCurrentIssueLabel(); };
+    p.addEventListener('loadeddata',onLoaded);
+  } else { p.currentTime=time; p.pause(); updateCurrentIssueLabel(); }
+  renderCommentsTable();
+}
+window.jumpToComment=jumpToComment;
+function editCommentInline(tr,c){
+  const cell=tr.querySelector('.commentTextCell'); const original=c.CommentText;
+  cell.innerHTML=`<textarea class="edit-inline" rows="2">${original}</textarea><div style="margin-top:4px;"><button class="secondary saveEdit">Save</button> <button class="secondary cancelEdit">Cancel</button></div>`;
+  cell.querySelector('.saveEdit').onclick=()=>{ c.CommentText=cell.querySelector('textarea').value.trim()||original; renderCommentsTable(); };
+  cell.querySelector('.cancelEdit').onclick=()=>renderCommentsTable();
+}
+
+/* ============ AUTO-SCAN ============ */
+function wireAutoScan(prefix){
+  document.getElementById('btnAutoScan_'+prefix).onclick=async()=>{
+    if(role!=='Reviewer'){
+      alert('Developers cannot run Auto-Scan or add comments. Please use Review Validations to mark Fixed by NIIT and add Follow-up Notes.');
+      return;
+    }
+    const videoKeyVal=prefix==='nr'?nrVideoKey:rvVideoKey;
+    const player=document.getElementById('player_'+prefix);
+    if(!videoKeyVal||!player.src){ alert('Browse/select a video first.'); return; }
+    player.pause();
+    const duration=player.duration||0, step=Math.max(2,duration/40);
+    pendingObservations[prefix]=[];
+    const btn=document.getElementById('btnAutoScan_'+prefix);
+    btn.disabled=true; btn.textContent='🔍 Scanning...';
+    for(let t=0;t<duration;t+=step){
+      player.currentTime=t;
+      await new Promise(r=>player.onseeked=r);
+      const found=await scanFrameCorners(player);
+      if(found){
+        const shot=captureFrameThumbnail(player);
+        pendingObservations[prefix].push({id:uid(), time:t, text:found, screenshot:shot, decided:false});
+      }
+    }
+    btn.disabled=false; btn.textContent='🔍 Auto-Scan for URLs';
+    renderObservations(prefix);
+    alert(`Auto-scan complete. ${pendingObservations[prefix].length} observation(s) found.`);
+  };
+}
+wireAutoScan('nr'); wireAutoScan('rv');
+function renderObservations(prefix){
+  const card=document.getElementById('obsCard_'+prefix); const list=document.getElementById('obsList_'+prefix);
+  const obs=pendingObservations[prefix].filter(o=>!o.decided);
+  if(!pendingObservations[prefix].length){ card.style.display='none'; return; }
+  card.style.display='block';
+  if(!obs.length){ list.innerHTML='<p class="note">All observations reviewed.</p>'; return; }
+  list.innerHTML='';
+  obs.forEach(o=>{
+    const div=document.createElement('div'); div.className='obs-item';
+    div.innerHTML=(o.screenshot?`<img src="${o.screenshot}">`:'')+`<div style="flex:1;"><b>${fmtTime(o.time)}</b> — ${o.text}<div class="obs-actions"></div></div>`;
+    const actions=div.querySelector('.obs-actions');
+    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
+    acceptBtn.onclick=()=>{
+      if(role!=='Reviewer') return;
+      const key=prefix==='nr'?nrVideoKey:rvVideoKey; const [app,vid]=key.split('|');
+      comments.push({CommentID:uid(), Application:app, VideoName:vid, Timestamp:o.time, TimestampDisplay:fmtTime(o.time),
+        Frame:Math.round(o.time*DEFAULT_FPS), CommentText:`Possible URL/link detected: ${o.text}`, InputType:'Auto',
+        CreatedBy:role, CreatedAt:nowIso(), FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'', ScreenshotDataUrl:o.screenshot||''});
+      o.decided=true; renderObservations(prefix);
+      if(prefix==='nr') renderNrRecentTable();
+      renderCommentsTable(); renderDashboard();
+    };
+    const rejectBtn=document.createElement('button'); rejectBtn.className='secondary'; rejectBtn.textContent='Reject';
+    rejectBtn.onclick=()=>{ o.decided=true; renderObservations(prefix); };
+    actions.appendChild(acceptBtn); actions.appendChild(rejectBtn);
+    list.appendChild(div);
+  });
+}
+async function scanFrameCorners(player){
+  const canvas=document.createElement('canvas'); canvas.width=player.videoWidth; canvas.height=player.videoHeight;
+  canvas.getContext('2d').drawImage(player,0,0,canvas.width,canvas.height);
+  const cw=canvas.width*0.3, ch=canvas.height*0.2;
+  const corners=[[0,0],[canvas.width-cw,0],[0,canvas.height-ch],[canvas.width-cw,canvas.height-ch]];
+  for(const [x,y] of corners){
+    const crop=document.createElement('canvas'); crop.width=cw; crop.height=ch;
+    crop.getContext('2d').drawImage(canvas,x,y,cw,ch,0,0,cw,ch);
+    try{ const {data:{text}}=await Tesseract.recognize(crop,'eng'); const m=text.match(/\b(?:https?:\/\/|www\.)[^\s]+/i); if(m) return m[0]; }catch(e){}
+  }
+  return null;
+}
+</script>
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
