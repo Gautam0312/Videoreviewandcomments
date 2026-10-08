@@ -33,29 +33,13 @@
     --radius:10px;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--sn-bg);
-    color:var(--sn-text);
-    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-
-  header{
-    display:flex;align-items:center;gap:14px;padding:14px 24px;
-    background:linear-gradient(135deg, var(--sn-navy) 0%, var(--sn-navy-dark) 100%);
-    color:white;flex-wrap:wrap;box-shadow:var(--shadow-md);position:relative;z-index:10;
-  }
+  body{margin:0;background:var(--sn-bg);color:var(--sn-text);font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+  header{display:flex;align-items:center;gap:14px;padding:14px 24px;background:linear-gradient(135deg, var(--sn-navy) 0%, var(--sn-navy-dark) 100%);color:white;flex-wrap:wrap;box-shadow:var(--shadow-md);position:relative;z-index:10;}
   header h1{font-size:18px;margin:0;flex:1;min-width:220px;font-weight:700;letter-spacing:-.01em;}
   header .tagline{font-size:11.5px;opacity:.7;display:block;margin-top:3px;font-weight:400;}
   header #roleLabel{background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;font-weight:600;}
   header #headerFileStatus{background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;transition:color .3s;}
-
-  button{
-    background:var(--sn-green);border:none;color:white;padding:9px 16px;border-radius:7px;
-    cursor:pointer;font-weight:600;font-size:13.5px;transition:all .18s ease;
-    box-shadow:var(--shadow-sm);
-  }
+  button{background:var(--sn-green);border:none;color:white;padding:9px 16px;border-radius:7px;cursor:pointer;font-weight:600;font-size:13.5px;transition:all .18s ease;box-shadow:var(--shadow-sm);}
   button:hover:not(:disabled){background:var(--sn-green-dark);box-shadow:var(--shadow-md);transform:translateY(-1px);}
   button:active:not(:disabled){transform:translateY(0);}
   button.secondary{background:white;color:var(--sn-navy);border:1.5px solid var(--sn-border);box-shadow:none;}
@@ -65,71 +49,37 @@
   button.link-btn{background:transparent;color:#BFDBFE;border:none;padding:0;font-size:12.5px;text-decoration:underline;box-shadow:none;font-weight:500;}
   button.link-btn:hover{color:white;transform:none;}
   button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;}
-
-  select,input[type=text],input[type=checkbox],textarea{
-    background:white;color:var(--sn-text);border:1.5px solid var(--sn-border);
-    border-radius:7px;padding:8px 11px;font-size:13.5px;transition:border-color .15s;
-  }
-  select:focus,input[type=text]:focus,textarea:focus{
-    outline:none;border-color:var(--sn-navy-light);box-shadow:0 0 0 3px rgba(21,64,122,.1);
-  }
-
+  select,input[type=text],input[type=checkbox],textarea{background:white;color:var(--sn-text);border:1.5px solid var(--sn-border);border-radius:7px;padding:8px 11px;font-size:13.5px;transition:border-color .15s;}
+  select:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:var(--sn-navy-light);box-shadow:0 0 0 3px rgba(21,64,122,.1);}
   .tabs{display:flex;gap:2px;padding:0 24px;background:var(--sn-navy-dark);box-shadow:inset 0 -1px 0 rgba(255,255,255,.06);}
-  .tabs button{
-    background:transparent;color:rgba(255,255,255,.65);border-radius:8px 8px 0 0;
-    padding:13px 18px;font-weight:600;font-size:13.5px;border-bottom:3px solid transparent;
-    box-shadow:none;transition:all .18s;
-  }
+  .tabs button{background:transparent;color:rgba(255,255,255,.65);border-radius:8px 8px 0 0;padding:13px 18px;font-weight:600;font-size:13.5px;border-bottom:3px solid transparent;box-shadow:none;transition:all .18s;}
   .tabs button:hover{background:rgba(255,255,255,.06);color:white;transform:none;}
   .tabs button.active{color:white;border-bottom:3px solid var(--sn-green);background:rgba(255,255,255,.05);}
-
   .subtabs{display:flex;gap:8px;margin-bottom:16px;}
   .subtabs button{background:white;color:var(--sn-navy);border-radius:8px;border:1.5px solid var(--sn-border);box-shadow:var(--shadow-sm);}
   .subtabs button.active{background:var(--sn-navy);color:white;border-color:var(--sn-navy);}
-
   .view{display:none;padding:24px;max-width:1450px;margin:0 auto;}
   .view.active{display:block;animation:fadeIn .25s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
   .subview{display:none;}
   .subview.active{display:block;}
-
-  .card{
-    background:var(--sn-panel);border:1px solid var(--sn-border-light);border-radius:var(--radius);
-    padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
-  }
+  .card{background:var(--sn-panel);border:1px solid var(--sn-border-light);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
   .card:hover{box-shadow:var(--shadow-md);}
-
-  .section-title{
-    color:var(--sn-navy);font-size:15px;font-weight:700;margin:0 0 12px 0;
-    border-left:4px solid var(--sn-green);padding-left:11px;letter-spacing:-.01em;
-  }
-
+  .section-title{color:var(--sn-navy);font-size:15px;font-weight:700;margin:0 0 12px 0;border-left:4px solid var(--sn-green);padding-left:11px;letter-spacing:-.01em;}
   .badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.01em;}
   .b-signedoff{background:var(--sn-ok-bg);color:var(--sn-green-dark);}
   .b-reviewer{background:#EFF6FF;color:#1D4ED8;}
   .b-developer{background:var(--sn-warn-bg);color:#92400E;}
   .b-none{background:#F1F5F9;color:var(--sn-muted);}
-
-  .modal-bg{
-    position:fixed;inset:0;background:rgba(6,32,62,.65);backdrop-filter:blur(2px);
-    display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease;
-  }
-  .modal{
-    background:white;padding:32px;border-radius:16px;min-width:400px;max-width:460px;
-    box-shadow:var(--shadow-lg);animation:modalPop .25s cubic-bezier(.2,1,.3,1);
-  }
+  .modal-bg{position:fixed;inset:0;background:rgba(6,32,62,.65);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease;}
+  .modal{background:white;padding:32px;border-radius:16px;min-width:400px;max-width:460px;box-shadow:var(--shadow-lg);animation:modalPop .25s cubic-bezier(.2,1,.3,1);}
   @keyframes modalPop{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
   .modal h2{color:var(--sn-navy);margin-top:0;font-size:22px;font-weight:800;letter-spacing:-.02em;}
   .modal p.note{margin-top:4px;}
-
+  .modal label.fieldLabel{display:block;font-size:12.5px;font-weight:600;color:var(--sn-navy);margin-bottom:6px;}
   .lockbar{background:var(--sn-warn-bg);color:#92400E;padding:10px 24px;font-size:13px;display:none;font-weight:500;}
-  .micbar{
-    background:linear-gradient(135deg,#1D4ED8,#1E40AF);color:white;padding:10px 24px;font-size:13px;
-    display:none;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;z-index:150;
-    box-shadow:var(--shadow-md);
-  }
+  .micbar{background:linear-gradient(135deg,#1D4ED8,#1E40AF);color:white;padding:10px 24px;font-size:13px;display:none;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;z-index:150;box-shadow:var(--shadow-md);}
   .micbar.active{display:flex;}
-
   video{width:100%;max-height:52vh;background:#0A0A0A;border-radius:10px;box-shadow:var(--shadow-md);}
   .vwrap{display:flex;gap:18px;flex-wrap:wrap;}
   .vcol{flex:2;min-width:380px;}
@@ -137,7 +87,6 @@
   .navrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;}
   .current-comment-box{font-size:13.5px;color:var(--sn-text);margin:0;line-height:1.6;}
   .currentIssue{font-size:12.5px;color:var(--sn-muted);flex:1;min-width:200px;}
-
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   th,td{border-bottom:1px solid var(--sn-border-light);padding:9px 10px;text-align:left;vertical-align:top;}
   th{background:#F8FAFC;color:var(--sn-navy);font-weight:700;border-bottom:2px solid var(--sn-border);}
@@ -146,63 +95,34 @@
   tbody tr:hover{background:#FAFBFC;}
   .thumb{width:72px;height:42px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--sn-border);transition:transform .15s;}
   .thumb:hover{transform:scale(1.08);box-shadow:var(--shadow-md);}
-
   .note{font-size:12.5px;color:var(--sn-muted);line-height:1.5;}
   input.followup{width:100%;font-size:12.5px;}
-
-  .fileStatus{
-    font-size:12.5px;color:var(--sn-muted);padding:10px 14px;background:white;
-    border:1.5px dashed var(--sn-border);border-radius:8px;margin-bottom:14px;font-weight:500;
-  }
-
+  .fileStatus{font-size:12.5px;color:var(--sn-muted);padding:10px 14px;background:white;border:1.5px dashed var(--sn-border);border-radius:8px;margin-bottom:14px;font-weight:500;}
   .statbar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
-  .stat{
-    flex:1;min-width:160px;background:white;border:1px solid var(--sn-border-light);
-    border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
-  }
+  .stat{flex:1;min-width:160px;background:white;border:1px solid var(--sn-border-light);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
   .stat:hover{box-shadow:var(--shadow-md);}
   .stat .num{font-size:26px;font-weight:800;color:var(--sn-navy);letter-spacing:-.02em;}
-
   .lightbox-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:300;cursor:zoom-out;}
   .lightbox-bg.active{display:flex;animation:fadeIn .2s;}
   .lightbox-bg img{max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
-
-  .multiselect-box{
-    border:1.5px solid var(--sn-border);border-radius:8px;padding:10px;max-height:150px;
-    overflow:auto;background:white;min-width:190px;
-  }
+  .multiselect-box{border:1.5px solid var(--sn-border);border-radius:8px;padding:10px;max-height:150px;overflow:auto;background:white;min-width:190px;}
   .multiselect-box label{display:block;font-size:12.5px;padding:4px 2px;cursor:pointer;border-radius:4px;transition:background .12s;}
   .multiselect-box label:hover{background:#F8FAFC;}
   .filterbar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-start;}
-
-  .obs-item{
-    display:flex;gap:12px;align-items:flex-start;border:1px solid var(--sn-border-light);
-    border-radius:8px;padding:12px;margin-bottom:10px;background:#FAFBFC;transition:box-shadow .15s;
-  }
+  .obs-item{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--sn-border-light);border-radius:8px;padding:12px;margin-bottom:10px;background:#FAFBFC;transition:box-shadow .15s;}
   .obs-item:hover{box-shadow:var(--shadow-sm);}
   .obs-item img{width:96px;border-radius:6px;}
   .obs-actions{display:flex;gap:8px;margin-top:8px;}
   .obs-actions button{padding:6px 12px;font-size:12px;}
-
-  .dash-card{
-    display:flex;flex-direction:column;background:white;border:1px solid var(--sn-border-light);
-    border-radius:10px;padding:16px 18px;text-align:left;box-shadow:var(--shadow-sm);transition:all .18s;
-  }
+  .dash-card{display:flex;flex-direction:column;background:white;border:1px solid var(--sn-border-light);border-radius:10px;padding:16px 18px;text-align:left;box-shadow:var(--shadow-sm);transition:all .18s;}
   .dash-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
   .dash-card-title{font-weight:700;color:var(--sn-navy);font-size:14.5px;margin-bottom:8px;letter-spacing:-.01em;}
   .dash-card-actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;margin-top:12px;border-top:1px solid var(--sn-border-light);}
   .dash-card-actions button{flex:1;min-width:90px;}
-
   .group-controls{display:flex;gap:8px;margin-bottom:12px;}
-  .app-group{
-    border:1px solid var(--sn-border-light);border-radius:12px;margin-bottom:14px;
-    background:white;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s;
-  }
+  .app-group{border:1px solid var(--sn-border-light);border-radius:12px;margin-bottom:14px;background:white;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
   .app-group:hover{box-shadow:var(--shadow-md);}
-  .app-header{
-    display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;
-    background:linear-gradient(to right, #F8FAFC, #FFFFFF);transition:background .15s;
-  }
+  .app-header{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;background:linear-gradient(to right, #F8FAFC, #FFFFFF);transition:background .15s;}
   .app-header:hover{background:#F1F5F9;}
   .app-header .chevron{transition:transform .2s;font-size:12px;color:var(--sn-navy);}
   .app-header.collapsed .chevron{transform:rotate(-90deg);}
@@ -211,7 +131,6 @@
   .app-body{padding:14px 18px 18px;animation:expandDown .2s ease;}
   .app-body.collapsed{display:none;}
   @keyframes expandDown{from{opacity:0;}to{opacity:1;}}
-
   .video-group{border:1px solid var(--sn-border-light);border-radius:8px;margin-bottom:10px;background:#FCFDFE;overflow:hidden;}
   .video-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background .12s;}
   .video-header:hover{background:#F3F6F9;}
@@ -221,28 +140,16 @@
   .video-body{padding:10px 14px 14px;}
   .video-body.collapsed{display:none;}
   .video-meta{font-size:11.5px;color:var(--sn-muted);}
-
-  .dev-restricted-note{
-    background:var(--sn-warn-bg);color:#92400E;padding:12px 16px;border-radius:8px;
-    font-size:12.5px;margin-bottom:14px;border-left:3px solid var(--sn-warn);
-  }
-  .dash-row{
-    display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
-    border:1px solid var(--sn-border-light);border-radius:10px;background:white;
-    margin-bottom:10px;box-shadow:var(--shadow-sm);transition:box-shadow .15s;
-  }
+  .dev-restricted-note{background:var(--sn-warn-bg);color:#92400E;padding:12px 16px;border-radius:8px;font-size:12.5px;margin-bottom:14px;border-left:3px solid var(--sn-warn);}
+  .dash-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1px solid var(--sn-border-light);border-radius:10px;background:white;margin-bottom:10px;box-shadow:var(--shadow-sm);transition:box-shadow .15s;}
   .dash-row:hover{box-shadow:var(--shadow-md);}
   .dash-row b{color:var(--sn-navy);}
-
   textarea.edit-inline{width:100%;font-size:12.5px;}
-
-  .sync-banner{
-    background:#EFF6FF;color:#1D4ED8;padding:8px 24px;font-size:12.5px;
-    display:none;align-items:center;gap:8px;border-bottom:1px solid #DBEAFE;font-weight:500;
-  }
+  .sync-banner{background:#EFF6FF;color:#1D4ED8;padding:8px 24px;font-size:12.5px;display:none;align-items:center;gap:8px;border-bottom:1px solid #DBEAFE;font-weight:500;}
   .sync-banner.show{display:flex;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:#1D4ED8;animation:pulseDot 1.2s infinite;}
   @keyframes pulseDot{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
+  .audit-note{font-size:10.5px;color:var(--sn-muted);margin-top:4px;font-style:italic;}
 </style>
 </head>
 <body>
@@ -250,25 +157,34 @@
 <div class="modal-bg" id="setupModal">
   <div class="modal">
     <h2>👋 Get started</h2>
-    <p class="note">Select your role, then load your spreadsheet.</p>
+    <p class="note">Select your role, enter your name, then load your spreadsheet.</p>
     <div style="display:flex;gap:10px;margin-bottom:16px;">
       <button id="btnReviewer">👀 I'm a Reviewer</button>
       <button id="btnDeveloper" class="secondary">🛠️ I'm a Developer (NIIT)</button>
     </div>
+    <div id="nameSection" style="display:none;border-top:1px solid #eee;padding-top:16px;margin-bottom:16px;">
+      <label class="fieldLabel">Your name (shown on changes you make)</label>
+      <input type="text" id="userNameInput" placeholder="e.g., Priya Sharma" style="width:100%;">
+    </div>
     <div id="fileSection" style="display:none;border-top:1px solid #eee;padding-top:16px;">
-      <p class="note" style="margin-top:0;">Role selected: <b id="roleConfirmLabel"></b></p>
+      <p class="note" style="margin-top:0;">Role: <b id="roleConfirmLabel"></b> • Name: <b id="nameConfirmLabel"></b></p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="secondary" id="btnDownloadTemplate">⬇ Download Blank Template</button>
         <button id="btnImportSpreadsheet">📂 Import Spreadsheet</button>
       </div>
-      <p class="note" style="margin-top:10px;">New to this tool? Download the template, fill it in (or leave blank), then import it back. Once imported in Chrome/Edge, changes auto-sync back to the same file every 3 seconds.</p>
+      <p class="note" style="margin-top:10px;">In Chrome/Edge, the tool reads the file every 3 seconds and writes back every 5 seconds. Every change is stamped with your name and the time it was made.</p>
     </div>
   </div>
 </div>
 
 <div class="lightbox-bg" id="lightbox" onclick="this.classList.remove('active')"><img id="lightboxImg" src=""></div>
 <div class="lockbar" id="lockBar"></div>
-<div class="sync-banner" id="syncBanner"><span class="sync-dot"></span> <span id="syncBannerText">Live sync active — saving every 3 seconds</span></div>
+<div class="sync-banner" id="syncBanner"><span class="sync-dot"></span> <span id="syncBannerText">Live sync active — reading every 3s, writing every 5s</span></div>
+<div class="sync-banner" id="permissionBanner" style="background:#FEF2F2;color:#DC2626;">
+  <span class="sync-dot" style="background:#DC2626;"></span>
+  <span>⚠️ Live sync paused — your browser needs you to confirm file access again.</span>
+  <button id="btnResumeSync" style="margin-left:auto;">Click to Resume Live Sync</button>
+</div>
 <div class="micbar" id="micBar"><span>🎤</span> <b id="micBarLabel">Recording...</b> <button class="secondary" style="padding:4px 10px;margin-left:auto;" id="btnStopMicBar">Stop</button></div>
 
 <header>
@@ -290,18 +206,21 @@
     <h2 class="section-title">About this tool</h2>
     <ul>
       <li>Workflow: Reviewer logs comments → Developer marks "Fixed by NIIT" → once ALL comments on a video are fixed, it's "Ready for Reviewer" → Reviewer approves each fix → once ALL approved, video is "Signed Off."</li>
-      <li><b>Live Sync:</b> once you import a spreadsheet in Chrome/Edge, every change you make is automatically written back to the same file every 3 seconds — no manual save needed. A blue banner at the top confirms sync is active.</li>
+      <li><b>Live Sync:</b> once imported in Chrome/Edge, the tool silently re-reads the file every <b>3 seconds</b> and writes back every <b>5 seconds</b>. Changes made by someone else on a different row merge in automatically. If the same comment row is edited by two people, <b>whichever edit has the most recent timestamp automatically wins</b>.</li>
+      <li><b>Change tracking:</b> every edit is stamped with the name you entered at setup and the exact date/time of the change — visible under each comment in Review Validations, and saved into the spreadsheet as audit columns.</li>
       <li><b>Developers cannot add new comments on any tab.</b> Developers may only mark "Fixed by NIIT" and add Follow-up Notes to existing comments.</li>
       <li>Comments are grouped by Application → Video, collapsed by default. Use Expand All / Collapse All to control visibility quickly.</li>
       <li>Signed-off videos are hidden from the Reviewer/Developer dashboard views but remain visible in Overview and in Review Validations' Signed-Off table.</li>
-      <li>Voice comments (Reviewer only): click Start Recording, speak, click Stop Recording when done. Recording auto-stops after 2 minutes as a safety cap. Nothing is submitted until you click Add Comment.</li>
+      <li>Voice comments (Reviewer only): click Start Recording, speak, click Stop Recording when done. Recording auto-stops after 2 minutes. Nothing is submitted until you click Add Comment.</li>
       <li>Use Prev/Next under the video to step through comments — the full comment text (no character limit) is shown directly below the video.</li>
-      <li>Timestamps are shown and stored as <b>mm:ss.s</b> everywhere.</li>
+      <li>Timestamps are shown and stored as <b>mm:ss.s</b> everywhere for video position.</li>
     </ul>
-    <h3 style="color:var(--sn-navy);">⚠️ Important note on live sync</h3>
+    <h3 style="color:var(--sn-navy);">⚠️ Notes on live sync</h3>
     <ul>
-      <li>Live sync only works in <b>Chrome or Edge</b>, and only after using "Import Spreadsheet" (not the fallback upload mode in other browsers).</li>
-      <li>If two people edit the same file at the same time, the person who saves last can still overwrite the other's changes — live sync reduces this risk window to seconds, but does not eliminate it. Avoid both Reviewer and Developer editing the exact same comment row simultaneously.</li>
+      <li>Browsers cannot read your computer's actual username for privacy reasons — that's why you're asked to type your name once at setup.</li>
+      <li>Live sync only works in <b>Chrome or Edge</b>, via "Import Spreadsheet."</li>
+      <li>If your browser asks you to re-confirm file access, a red banner will appear at the top with a "Click to Resume Live Sync" button — click it once and syncing continues automatically.</li>
+      <li>Conflict rule: same field, same row, edited by two people — the edit with the latest timestamp is kept automatically.</li>
     </ul>
   </div>
 </div>
@@ -437,9 +356,10 @@
 /* ============ STATE ============ */
 const sessionId = crypto.randomUUID();
 let role=null, fileHandle=null, workbook=null, comments=[], config={}, videoFiles={};
-let heartbeatTimer=null, recognition=null, micStream=null, micPermissionGranted=false;
+let recognition=null, micStream=null, micPermissionGranted=false;
+let currentUserName = '';
 const DEFAULT_FPS=30;
-const COMMENT_COLUMNS=['CommentID','Application','VideoName','Timestamp','TimestampDisplay','Frame','CommentText','InputType','CreatedBy','CreatedAt','FixedByNIIT','ApprovedByReviewer','AutoDetected','FollowUpNotes','ScreenshotDataUrl'];
+const COMMENT_COLUMNS=['CommentID','Application','VideoName','Timestamp','TimestampDisplay','Frame','CommentText','InputType','CreatedBy','CreatedAt','FixedByNIIT','ApprovedByReviewer','AutoDetected','FollowUpNotes','ScreenshotDataUrl','_LastModified','_LastModifiedBy','_LastModifiedAt'];
 let nrVideoKey=null, rvVideoKey=null, pendingCaptures={nr:null,rv:null}, rvCurrentCommentId=null;
 let dashSub='reviewer';
 let pendingObservations={nr:[],rv:[]};
@@ -453,10 +373,15 @@ let recordingTimers = {nr:null, rv:null};
 let countdownIntervals = {nr:null, rv:null};
 const MAX_RECORDING_MS = 2 * 60 * 1000;
 
-/* ===== LIVE SYNC STATE ===== */
-let syncInProgress = false;
+/* ===== LIVE SYNC STATE (3s read / 5s write, self-rescheduling) ===== */
+let readSyncTimer = null;
+let writeSyncTimer = null;
+let readInProgress = false;
+let writeInProgress = false;
 let userIsTyping = false;
 let lastSyncSuccess = null;
+let deletedCommentIds = new Set();
+let syncPermissionLost = false;
 
 /* ============ UTIL ============ */
 function uid(){return 'C'+Math.random().toString(36).slice(2,10);}
@@ -464,6 +389,12 @@ function fmtTime(sec){
   sec=Math.max(0,Number(sec)||0);
   const m=Math.floor(sec/60), s=sec-m*60;
   return `${String(m).padStart(2,'0')}:${s.toFixed(1).padStart(4,'0')}`;
+}
+function fmtReadableDateTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
 }
 function parseTimeFlexible(val){
   if(typeof val==='number') return val;
@@ -485,8 +416,13 @@ function parseAppFromVideoName(nameNoExt){
   let vid=nameNoExt.slice(idx).replace(/^[_\-\s]+/,'').trim()||nameNoExt;
   return {app:app||'UnknownApp', vid};
 }
+function touchComment(c){
+  c._LastModified = Date.now();
+  c._LastModifiedBy = currentUserName || role || 'Unknown';
+  c._LastModifiedAt = nowIso();
+}
 
-/* ===== TRACK TYPING STATE (pauses sync mid-keystroke) ===== */
+/* ===== TRACK TYPING (pauses read AND write sync mid-keystroke) ===== */
 document.addEventListener('focusin', (e)=>{
   if(e.target.matches('textarea, input[type=text]')) userIsTyping = true;
 });
@@ -519,18 +455,21 @@ function refreshFileStatus(){
 }
 function updateSyncIndicator(state, detail){
   const el = document.getElementById('syncBannerText');
-  const dot = document.querySelector('.sync-dot');
+  const dot = document.querySelector('#syncBanner .sync-dot');
   if(!el) return;
   if(state === 'idle'){
     el.textContent = lastSyncSuccess
-      ? `Live sync active — last synced ${Math.max(0, Math.round((Date.now()-lastSyncSuccess)/1000))}s ago`
-      : 'Live sync active — saving every 3 seconds';
+      ? `Live sync active — last written ${Math.max(0, Math.round((Date.now()-lastSyncSuccess)/1000))}s ago`
+      : 'Live sync active — reading every 3s, writing every 5s';
     dot.style.background = '#1D4ED8';
-  } else if(state === 'syncing'){
-    el.textContent = '🔄 Syncing to file...';
+  } else if(state === 'reading'){
+    el.textContent = '🔄 Checking for changes from other users...';
+    dot.style.background = '#1D4ED8';
+  } else if(state === 'writing'){
+    el.textContent = '💾 Writing your changes to file...';
     dot.style.background = '#1D4ED8';
   } else if(state === 'success'){
-    el.textContent = '✅ Synced successfully';
+    el.textContent = '✅ Saved successfully';
     dot.style.background = '#16A34A';
   } else if(state === 'error'){
     el.textContent = `⚠️ Sync failed — ${detail || 'check file permissions'}`;
@@ -539,6 +478,12 @@ function updateSyncIndicator(state, detail){
     el.textContent = '⚠️ Live sync unavailable — browser cannot write directly to this file';
     dot.style.background = '#B8860B';
   }
+}
+function showSyncToast(msg){
+  const el = document.getElementById('syncBannerText');
+  if(!el) return;
+  el.textContent = msg;
+  setTimeout(()=>{ updateSyncIndicator('idle'); }, 3500);
 }
 
 /* ============ SETUP MODAL ============ */
@@ -561,11 +506,21 @@ function chooseRole(r){
   }
 
   applyRoleUI();
-  document.getElementById('fileSection').style.display='block';
+  document.getElementById('nameSection').style.display='block';
 }
 
+document.getElementById('userNameInput').addEventListener('input', (e)=>{
+  currentUserName = e.target.value.trim();
+  document.getElementById('nameConfirmLabel').textContent = currentUserName || '(not entered)';
+  document.getElementById('fileSection').style.display = currentUserName ? 'block' : 'none';
+});
+
 document.getElementById('btnDownloadTemplate').onclick=downloadTemplate;
-document.getElementById('btnImportSpreadsheet').onclick=async()=>{ await openSpreadsheetFlow(); if(workbook) document.getElementById('setupModal').style.display='none'; };
+document.getElementById('btnImportSpreadsheet').onclick=async()=>{
+  if(!currentUserName){ alert('Please enter your name before continuing.'); return; }
+  await openSpreadsheetFlow();
+  if(workbook) document.getElementById('setupModal').style.display='none';
+};
 document.getElementById('btnChangeFile').onclick=()=>{ document.getElementById('setupModal').style.display='flex'; };
 function downloadTemplate(){
   if(!checkLibLoaded()) return;
@@ -640,10 +595,10 @@ async function openSpreadsheetFlow(){
     }
     await loadWorkbookFromFile(file);
     checkAndSetLock();
-    startHeartbeat();
+    startLiveSync();
     refreshFileStatus();
     const appCount=[...new Set(comments.map(c=>c.Application).filter(Boolean))].length;
-    alert(`Spreadsheet loaded successfully.\n\nApplications: ${appCount}\nComments: ${comments.length}\n\n${fileHandle ? 'Live sync is now active — changes save automatically every 3 seconds.' : 'Note: live sync unavailable in this mode. Use Review Complete to download your changes.'}`);
+    alert(`Spreadsheet loaded successfully.\n\nApplications: ${appCount}\nComments: ${comments.length}\n\n${fileHandle ? 'Live sync is now active — reading every 3s, writing every 5s. Your changes will be stamped as "'+currentUserName+'".' : 'Note: live sync unavailable in this mode. Use Review Complete to download your changes.'}`);
   }catch(e){ console.error(e); alert('Could not read the spreadsheet.\n\n'+(e.message||e)); }
 }
 async function loadWorkbookFromFile(file){
@@ -651,20 +606,25 @@ async function loadWorkbookFromFile(file){
   workbook=XLSX.read(buf,{type:'array', cellDates:true});
   loadCommentsSheet(); loadConfigSheet(); refreshFilters(); renderDashboard();
 }
+function normalizeCommentRow(c){
+  if(c.FollowUpNotes===undefined) c.FollowUpNotes='';
+  if(c.ScreenshotDataUrl===undefined) c.ScreenshotDataUrl='';
+  if((!c.Application||String(c.Application).trim()==='') && c.VideoName){
+    const p=parseAppFromVideoName(String(c.VideoName)); c.Application=p?p.app:'UnknownApp';
+  }
+  if(c.Timestamp===undefined||c.Timestamp===''||isNaN(Number(c.Timestamp))) c.Timestamp=c.TimestampDisplay?parseTimeFlexible(c.TimestampDisplay):0;
+  else c.Timestamp=Number(c.Timestamp)||0;
+  c.TimestampDisplay=fmtTime(c.Timestamp);
+  c._LastModified = (c._LastModified===undefined || c._LastModified==='' || isNaN(Number(c._LastModified))) ? 0 : Number(c._LastModified);
+  if(c._LastModifiedBy===undefined) c._LastModifiedBy='';
+  if(c._LastModifiedAt===undefined) c._LastModifiedAt='';
+  return c;
+}
 function loadCommentsSheet(){
   let ws=workbook.Sheets['Comments'];
   if(!ws){ ws=XLSX.utils.aoa_to_sheet([COMMENT_COLUMNS]); workbook.SheetNames.push('Comments'); workbook.Sheets['Comments']=ws; comments=[]; return; }
   comments=XLSX.utils.sheet_to_json(ws,{defval:''});
-  comments.forEach(c=>{
-    if(c.FollowUpNotes===undefined) c.FollowUpNotes='';
-    if(c.ScreenshotDataUrl===undefined) c.ScreenshotDataUrl='';
-    if((!c.Application||String(c.Application).trim()==='') && c.VideoName){
-      const p=parseAppFromVideoName(String(c.VideoName)); c.Application=p?p.app:'UnknownApp';
-    }
-    if(c.Timestamp===undefined||c.Timestamp===''||isNaN(Number(c.Timestamp))) c.Timestamp=c.TimestampDisplay?parseTimeFlexible(c.TimestampDisplay):0;
-    else c.Timestamp=Number(c.Timestamp)||0;
-    c.TimestampDisplay=fmtTime(c.Timestamp);
-  });
+  comments.forEach(normalizeCommentRow);
 }
 function loadConfigSheet(){
   config={};
@@ -672,7 +632,7 @@ function loadConfigSheet(){
   if(ws) XLSX.utils.sheet_to_json(ws,{header:1}).forEach(r=>{ if(r[0]) config[r[0]]=r[1]; });
 }
 function writeCommentsBack(){
-  comments.forEach(c=>{ c.TimestampDisplay=fmtTime(c.Timestamp); });
+  comments.forEach(c=>{ c.TimestampDisplay=fmtTime(c.Timestamp); if(c._LastModified===undefined) c._LastModified=0; });
   const ws=XLSX.utils.json_to_sheet(comments,{header:COMMENT_COLUMNS});
   workbook.Sheets['Comments']=ws;
   if(!workbook.SheetNames.includes('Comments')) workbook.SheetNames.push('Comments');
@@ -693,7 +653,7 @@ async function saveWorkbook(){
 async function reviewCompleteFlow(){
   if(!workbook){ alert('Load a spreadsheet first.'); return; }
   if(!confirm('Mark review complete and stamp this in the spreadsheet now?')) return;
-  config.ReviewCompletedAt=nowIso(); config.ReviewCompletedBy=role;
+  config.ReviewCompletedAt=nowIso(); config.ReviewCompletedBy=currentUserName||role;
   workbook.Sheets['Config']=XLSX.utils.aoa_to_sheet(Object.entries(config));
   if(!workbook.SheetNames.includes('Config')) workbook.SheetNames.push('Config');
   try{
@@ -709,7 +669,7 @@ async function reviewCompleteFlow(){
 document.getElementById('btnReviewCompleteNR').onclick=reviewCompleteFlow;
 document.getElementById('btnReviewCompleteRV').onclick=reviewCompleteFlow;
 function writeLockSheet(){
-  workbook.Sheets['_Lock']=XLSX.utils.aoa_to_sheet([['SessionId',sessionId],['LockedBy',role||'Unknown'],['Timestamp',nowIso()]]);
+  workbook.Sheets['_Lock']=XLSX.utils.aoa_to_sheet([['SessionId',sessionId],['LockedBy',currentUserName||role||'Unknown'],['Timestamp',nowIso()]]);
   if(!workbook.SheetNames.includes('_Lock')) workbook.SheetNames.push('_Lock');
 }
 function checkAndSetLock(){
@@ -720,36 +680,170 @@ function checkAndSetLock(){
       const age=(Date.now()-new Date(map.Timestamp||0).getTime())/60000;
       if(map.SessionId && map.SessionId!==sessionId && age<10){
         const bar=document.getElementById('lockBar'); bar.style.display='block';
-        bar.textContent=`Note: file may be in use by "${map.LockedBy}" (${age.toFixed(1)} min ago). Live sync reduces but does not eliminate the risk of overwriting their changes.`;
+        bar.textContent=`Note: file may also be open with "${map.LockedBy}" (${age.toFixed(1)} min ago). Live sync will merge both of your changes automatically.`;
       }
     }
   }catch(e){}
 }
 
-/* ===== LIVE SYNC: every 3 seconds ===== */
-function startHeartbeat(){
-  if(heartbeatTimer) clearInterval(heartbeatTimer);
-  heartbeatTimer = setInterval(async ()=>{
-    if(!workbook) return;
-    if(userIsTyping) return;                 // don't interrupt active typing
-    if(!fileHandle){ updateSyncIndicator('unsupported'); return; } // only works with real fileHandle
-    if(syncInProgress) return;                // avoid overlapping writes
+/* ============ LIVE SYNC: READ (3s) + WRITE (5s), self-rescheduling + permission-safe ============ */
+function startLiveSync(){
+  if(readSyncTimer) clearTimeout(readSyncTimer);
+  if(writeSyncTimer) clearTimeout(writeSyncTimer);
+  scheduleNextRead();
+  scheduleNextWrite();
 
-    syncInProgress = true;
-    updateSyncIndicator('syncing');
-    try{
-      await saveWorkbook();
-      lastSyncSuccess = Date.now();
-      updateSyncIndicator('success');
-      setTimeout(()=>{ if(!syncInProgress) updateSyncIndicator('idle'); }, 1200);
-    }catch(e){
-      console.warn('Live sync failed:', e);
-      updateSyncIndicator('error', e.message);
-    }finally{
-      syncInProgress = false;
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && fileHandle && !syncPermissionLost){
+      doReadMergeCycle();
     }
-  }, 3000); // 3-SECOND LIVE SYNC
+  });
+  window.addEventListener('focus', ()=>{
+    if(fileHandle && !syncPermissionLost) doReadMergeCycle();
+  });
 }
+
+function scheduleNextRead(){
+  readSyncTimer = setTimeout(async ()=>{
+    await doReadMergeCycle();
+    scheduleNextRead();
+  }, 3000); // read every 3 seconds
+}
+function scheduleNextWrite(){
+  writeSyncTimer = setTimeout(async ()=>{
+    await doWriteCycle();
+    scheduleNextWrite();
+  }, 5000); // write every 5 seconds
+}
+
+async function ensureWritePermission(){
+  if(!fileHandle || !fileHandle.queryPermission) return true;
+  try{
+    const status = await fileHandle.queryPermission({mode:'readwrite'});
+    if(status === 'granted') return true;
+    syncPermissionLost = true;
+    document.getElementById('permissionBanner').classList.add('show');
+    return false;
+  }catch(e){
+    console.warn('Permission check failed:', e);
+    return true;
+  }
+}
+
+async function doReadMergeCycle(){
+  if(!workbook || !fileHandle){ updateSyncIndicator('unsupported'); return; }
+  if(userIsTyping) return;
+  if(readInProgress || writeInProgress) return;
+  if(syncPermissionLost) return;
+  readInProgress = true;
+  updateSyncIndicator('reading');
+  try{
+    const file = await fileHandle.getFile();
+    const buf = await file.arrayBuffer();
+    const wbIncoming = XLSX.read(buf, {type:'array', cellDates:true});
+    const wsIncoming = wbIncoming.Sheets['Comments'];
+    if(!wsIncoming){ updateSyncIndicator('idle'); return; }
+
+    let incomingRows = XLSX.utils.sheet_to_json(wsIncoming, {defval:''});
+    incomingRows.forEach(normalizeCommentRow);
+
+    const incomingMap = {};
+    incomingRows.forEach(r=> incomingMap[r.CommentID] = r);
+    const localMap = {};
+    comments.forEach(c=> localMap[c.CommentID]=c);
+
+    let changed = false;
+    let updatesFromOthers = 0;
+    let lastUpdaterName = '';
+    const merged = [];
+
+    incomingRows.forEach(incoming=>{
+      const id = incoming.CommentID;
+      if(deletedCommentIds.has(id)){ changed = true; return; }
+      const local = localMap[id];
+      if(!local){
+        merged.push(incoming); changed = true; updatesFromOthers++;
+        lastUpdaterName = incoming._LastModifiedBy || lastUpdaterName;
+        return;
+      }
+      const incomingMod = incoming._LastModified || 0;
+      const localMod = local._LastModified || 0;
+      if(incomingMod > localMod){
+        merged.push(incoming); changed = true; updatesFromOthers++;
+        lastUpdaterName = incoming._LastModifiedBy || lastUpdaterName;
+      } else {
+        merged.push(local);
+      }
+    });
+    comments.forEach(local=>{
+      if(!incomingMap[local.CommentID] && !deletedCommentIds.has(local.CommentID)) merged.push(local);
+    });
+    [...deletedCommentIds].forEach(id=>{ if(!incomingMap[id]) deletedCommentIds.delete(id); });
+
+    if(changed){
+      comments = merged;
+      refreshFilters(); renderDashboard(); renderCommentsTable(); renderNrRecentTable();
+      if(updatesFromOthers > 0) showSyncToast(`🔄 Synced ${updatesFromOthers} update(s)${lastUpdaterName ? ' from ' + lastUpdaterName : ''}`);
+      else updateSyncIndicator('idle');
+    } else {
+      updateSyncIndicator('idle');
+    }
+  }catch(e){
+    console.warn('Read-sync failed:', e);
+    updateSyncIndicator('error', e.message);
+  }finally{
+    readInProgress = false;
+  }
+}
+
+async function doWriteCycle(){
+  if(!workbook) return;
+  if(userIsTyping) return;
+  if(!fileHandle){ updateSyncIndicator('unsupported'); return; }
+  if(writeInProgress || readInProgress) return;
+  if(syncPermissionLost) return;
+  writeInProgress = true;
+  updateSyncIndicator('writing');
+  try{
+    const hasPermission = await ensureWritePermission();
+    if(!hasPermission){
+      updateSyncIndicator('error', 'Permission needs to be reconfirmed — click "Resume Live Sync" above');
+      return;
+    }
+    await saveWorkbook();
+    lastSyncSuccess = Date.now();
+    updateSyncIndicator('success');
+    setTimeout(()=>{ if(!writeInProgress && !readInProgress) updateSyncIndicator('idle'); }, 1200);
+  }catch(e){
+    console.warn('Write-sync failed:', e);
+    if(e.name === 'NotAllowedError'){
+      syncPermissionLost = true;
+      document.getElementById('permissionBanner').classList.add('show');
+      updateSyncIndicator('error', 'Permission lost — click "Resume Live Sync" above');
+    } else {
+      updateSyncIndicator('error', e.message);
+    }
+  }finally{
+    writeInProgress = false;
+  }
+}
+
+document.getElementById('btnResumeSync').onclick = async ()=>{
+  if(!fileHandle) return;
+  try{
+    const status = await fileHandle.requestPermission({mode:'readwrite'});
+    if(status === 'granted'){
+      syncPermissionLost = false;
+      document.getElementById('permissionBanner').classList.remove('show');
+      updateSyncIndicator('idle');
+      await doWriteCycle();
+    } else {
+      alert('Permission was not granted. Live sync will remain paused until you allow write access.');
+    }
+  }catch(e){
+    alert('Could not reconfirm permission.\n\n'+(e.message||e));
+  }
+};
 
 /* ============ MIC PERMISSION ============ */
 document.getElementById('btnStopMicBar').onclick=()=>{
@@ -969,9 +1063,11 @@ function wireCommentCapture(prefix){
     if(!box.value.trim()){ alert('Enter or speak a comment.'); return; }
     if(!pendingCaptures[prefix]){ alert('Click inside the comment box first.'); return; }
     const [app, vid] = key.split('|'); const cap = pendingCaptures[prefix];
-    comments.push({CommentID:uid(), Application:app, VideoName:vid, Timestamp:cap.timestamp, TimestampDisplay:fmtTime(cap.timestamp),
-      Frame:cap.frame, CommentText:box.value.trim(), InputType: finalTranscripts[prefix].trim() ? 'Voice':'Text', CreatedBy:role, CreatedAt:nowIso(),
-      FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'No', FollowUpNotes:'', ScreenshotDataUrl:cap.screenshot||''});
+    const newComment = {CommentID:uid(), Application:app, VideoName:vid, Timestamp:cap.timestamp, TimestampDisplay:fmtTime(cap.timestamp),
+      Frame:cap.frame, CommentText:box.value.trim(), InputType: finalTranscripts[prefix].trim() ? 'Voice':'Text', CreatedBy:currentUserName||role, CreatedAt:nowIso(),
+      FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'No', FollowUpNotes:'', ScreenshotDataUrl:cap.screenshot||''};
+    touchComment(newComment);
+    comments.push(newComment);
     box.value=''; pendingCaptures[prefix]=null; finalTranscripts[prefix]='';
     document.getElementById('pendingMeta_'+prefix).innerHTML='';
     if(prefix==='nr') renderNrRecentTable();
@@ -1040,10 +1136,10 @@ function updateCurrentIssueLabel(){
 document.getElementById('btnQuickAction_rv').onclick=()=>{
   const c=comments.find(x=>x.CommentID===rvCurrentCommentId);
   if(!c){ alert('Select an issue first.'); return; }
-  if(role==='Developer') c.FixedByNIIT='Yes';
+  if(role==='Developer'){ c.FixedByNIIT='Yes'; touchComment(c); }
   else if(role==='Reviewer'){
     if(c.FixedByNIIT!=='Yes' && !confirm('Not yet marked Fixed by NIIT. Approve anyway?')) return;
-    c.ApprovedByReviewer='Yes';
+    c.ApprovedByReviewer='Yes'; touchComment(c);
   }
   renderCommentsTable(); renderDashboard(); updateCurrentIssueLabel();
 };
@@ -1216,7 +1312,7 @@ function renderOverviewDash(){
 function rollbackVideo(app,vid){
   if(role!=='Reviewer') return;
   if(!confirm(`Rollback sign-off for ${app} / ${vid}?`)) return;
-  comments.filter(c=>c.Application===app&&c.VideoName===vid).forEach(c=>c.ApprovedByReviewer='No');
+  comments.filter(c=>c.Application===app&&c.VideoName===vid).forEach(c=>{ c.ApprovedByReviewer='No'; touchComment(c); });
   renderDashboard(); renderCommentsTable();
 }
 function openVideoIn(tab,app,vid){
@@ -1234,10 +1330,13 @@ window.openVideoIn=openVideoIn;
 function roleBlockedChange(sel,revert,msg){ alert(msg); sel.value=revert; }
 function buildCommentRowHtml(c){
   const shot=c.ScreenshotDataUrl?`<img src="${c.ScreenshotDataUrl}" class="thumb" onclick="openLightbox('${c.ScreenshotDataUrl}')">`:'';
+  const auditLine = c._LastModifiedBy
+    ? `<div class="audit-note">Last updated by ${c._LastModifiedBy}${c._LastModifiedAt ? ' on ' + fmtReadableDateTime(c._LastModifiedAt) : ''}</div>`
+    : '';
   return `<tr data-id="${c.CommentID}">
     <td><a href="#" class="jumpTime" data-app="${c.Application}" data-vid="${c.VideoName}" data-t="${c.Timestamp}" data-id="${c.CommentID}">${fmtTime(c.Timestamp)}</a></td>
     <td>${shot}</td>
-    <td class="commentTextCell">${c.CommentText}${c.AutoDetected==='Yes'?' <span class="badge b-developer">auto</span>':''}</td>
+    <td class="commentTextCell">${c.CommentText}${c.AutoDetected==='Yes'?' <span class="badge b-developer">auto</span>':''}${auditLine}</td>
     <td>${c.InputType}</td>
     <td class="fixedCell"></td><td class="apprCell"></td><td class="notesCell"></td><td class="actCell"></td>
   </tr>`;
@@ -1332,22 +1431,28 @@ function renderCommentsTable(){
     if(!c) return;
 
     const fixedSel=document.createElement('select'); fixedSel.innerHTML='<option>No</option><option>Yes</option>'; fixedSel.value=c.FixedByNIIT||'No';
-    fixedSel.onchange=()=>{ if(role!=='Developer'){ roleBlockedChange(fixedSel,c.FixedByNIIT||'No','Only Developers can update Fixed by NIIT.'); return; } c.FixedByNIIT=fixedSel.value; renderCommentsTable(); renderDashboard(); };
+    fixedSel.onchange=()=>{ if(role!=='Developer'){ roleBlockedChange(fixedSel,c.FixedByNIIT||'No','Only Developers can update Fixed by NIIT.'); return; } c.FixedByNIIT=fixedSel.value; touchComment(c); renderCommentsTable(); renderDashboard(); };
     tr.querySelector('.fixedCell').appendChild(fixedSel);
 
     const apprSel=document.createElement('select'); apprSel.innerHTML='<option>No</option><option>Yes</option>'; apprSel.value=c.ApprovedByReviewer||'No';
-    apprSel.onchange=()=>{ if(role!=='Reviewer'){ roleBlockedChange(apprSel,c.ApprovedByReviewer||'No','Only Reviewers can update Approved by Reviewer.'); return; } c.ApprovedByReviewer=apprSel.value; renderCommentsTable(); renderDashboard(); };
+    apprSel.onchange=()=>{ if(role!=='Reviewer'){ roleBlockedChange(apprSel,c.ApprovedByReviewer||'No','Only Reviewers can update Approved by Reviewer.'); return; } c.ApprovedByReviewer=apprSel.value; touchComment(c); renderCommentsTable(); renderDashboard(); };
     tr.querySelector('.apprCell').appendChild(apprSel);
 
     const notesInput=document.createElement('input'); notesInput.type='text'; notesInput.className='followup'; notesInput.placeholder='Follow-up note...'; notesInput.value=c.FollowUpNotes||'';
-    notesInput.onchange=()=>{ c.FollowUpNotes=notesInput.value; };
+    notesInput.onchange=()=>{ c.FollowUpNotes=notesInput.value; touchComment(c); renderCommentsTable(); };
     tr.querySelector('.notesCell').appendChild(notesInput);
 
     if(role==='Reviewer'){
       const editBtn=document.createElement('button'); editBtn.className='secondary'; editBtn.textContent='Edit';
       editBtn.onclick=()=>editCommentInline(tr,c);
       const delBtn=document.createElement('button'); delBtn.className='danger'; delBtn.style.marginLeft='4px'; delBtn.textContent='Delete';
-      delBtn.onclick=()=>{ if(!confirm('Delete permanently?')) return; comments=comments.filter(x=>x.CommentID!==c.CommentID); if(rvCurrentCommentId===c.CommentID) rvCurrentCommentId=null; renderCommentsTable(); renderDashboard(); };
+      delBtn.onclick=()=>{
+        if(!confirm('Delete permanently?')) return;
+        deletedCommentIds.add(c.CommentID);
+        comments=comments.filter(x=>x.CommentID!==c.CommentID);
+        if(rvCurrentCommentId===c.CommentID) rvCurrentCommentId=null;
+        renderCommentsTable(); renderDashboard();
+      };
       tr.querySelector('.actCell').appendChild(editBtn);
       tr.querySelector('.actCell').appendChild(delBtn);
     }
@@ -1403,7 +1508,7 @@ window.jumpToComment=jumpToComment;
 function editCommentInline(tr,c){
   const cell=tr.querySelector('.commentTextCell'); const original=c.CommentText;
   cell.innerHTML=`<textarea class="edit-inline" rows="2">${original}</textarea><div style="margin-top:4px;"><button class="secondary saveEdit">Save</button> <button class="secondary cancelEdit">Cancel</button></div>`;
-  cell.querySelector('.saveEdit').onclick=()=>{ c.CommentText=cell.querySelector('textarea').value.trim()||original; renderCommentsTable(); };
+  cell.querySelector('.saveEdit').onclick=()=>{ c.CommentText=cell.querySelector('textarea').value.trim()||original; touchComment(c); renderCommentsTable(); };
   cell.querySelector('.cancelEdit').onclick=()=>renderCommentsTable();
 }
 
@@ -1452,9 +1557,11 @@ function renderObservations(prefix){
     acceptBtn.onclick=()=>{
       if(role!=='Reviewer') return;
       const key=prefix==='nr'?nrVideoKey:rvVideoKey; const [app,vid]=key.split('|');
-      comments.push({CommentID:uid(), Application:app, VideoName:vid, Timestamp:o.time, TimestampDisplay:fmtTime(o.time),
+      const newComment = {CommentID:uid(), Application:app, VideoName:vid, Timestamp:o.time, TimestampDisplay:fmtTime(o.time),
         Frame:Math.round(o.time*DEFAULT_FPS), CommentText:`Possible URL/link detected: ${o.text}`, InputType:'Auto',
-        CreatedBy:role, CreatedAt:nowIso(), FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'', ScreenshotDataUrl:o.screenshot||''});
+        CreatedBy:currentUserName||role, CreatedAt:nowIso(), FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'', ScreenshotDataUrl:o.screenshot||''};
+      touchComment(newComment);
+      comments.push(newComment);
       o.decided=true; renderObservations(prefix);
       if(prefix==='nr') renderNrRecentTable();
       renderCommentsTable(); renderDashboard();
