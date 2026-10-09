@@ -14,1838 +14,817 @@
                         </head>
                         <body>
                             <!DOCTYPE html>
-<!-- ============================================================
-     STABLE VERSION v1.0 — confirmed working baseline.
-     (Includes: sync banner with name/role, Review Validations
-     table spacing fix, role-based Review Complete button label.)
-     ============================================================ -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Video Review & Comment Logger</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<title>ClientSide Video Review Tool</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-:root{
-  --navy:#0F2A4A; --navy-light:#16407a; --indigo:#4F46E5; --green:#16A34A; --green-dark:#128a3e;
-  --amber:#D97706; --blue:#2563EB; --red:#DC2626;
-  --bg:#F3F5F8; --surface:#FFFFFF; --border:#E4E8EE; --border-strong:#D3D9E2;
-  --text:#1A2233; --muted:#6B7482; --muted-light:#9AA2B1;
-  --radius-sm:8px; --radius:12px; --radius-lg:18px;
-  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
-  --shadow:0 2px 8px rgba(16,24,40,.06);
-  --shadow-lg:0 12px 32px rgba(16,24,40,.14);
-}
-*{box-sizing:border-box;}
-body{
-  font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  margin:0; background:var(--bg); color:var(--text); line-height:1.55; font-size:14px;
-  -webkit-font-smoothing:antialiased;
-}
-h1,h2,h3{font-family:inherit; letter-spacing:-.01em;}
-header.app-header{
-  background:linear-gradient(120deg,var(--navy) 0%, var(--navy-light) 100%);
-  color:#fff; padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
-  box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 4px 14px rgba(10,30,60,.25);
-  flex-wrap:wrap; gap:10px;
-}
-.brand{display:flex; align-items:center; gap:10px;}
-.brand .logo{
-  width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.14);
-  display:flex; align-items:center; justify-content:center; font-size:17px;
-}
-header.app-header h1{font-size:16.5px; margin:0; font-weight:700;}
-header.app-header .tagline{font-size:11.5px; color:#c9d7ee; font-weight:400; margin-top:1px;}
-.header-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-.user-chip{
-  display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); padding:6px 14px 6px 6px; border-radius:30px; font-size:12.5px;
-}
-.user-chip .avatar{
-  width:24px; height:24px; border-radius:50%; background:#fff; color:var(--navy); font-weight:700; font-size:11px;
-  display:flex; align-items:center; justify-content:center;
-}
-.role-pill{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#c9d7ee;}
-
-.header-sync{
-  display:none; align-items:center; gap:8px; background:rgba(255,255,255,.12); padding:6px 14px; border-radius:30px; font-size:12px; color:#eaf0fb; font-weight:600;
-}
-.header-sync .dot{width:7px; height:7px; border-radius:50%; background:#4ADE80; animation:pulse 1.4s infinite; flex-shrink:0;}
-@keyframes pulse{0%{opacity:1;}50%{opacity:.25;}100%{opacity:1;}}
-
-nav.tabs{
-  display:flex; gap:4px; background:#fff; border-bottom:1px solid var(--border);
-  padding:0 24px; position:sticky; top:0; z-index:60; box-shadow:var(--shadow-sm);
-}
-nav.tabs button{
-  background:none; border:none; padding:14px 16px; cursor:pointer; font-size:13.5px; color:var(--muted);
-  border-bottom:2.5px solid transparent; transition:all .18s; font-weight:600; display:flex; align-items:center; gap:6px;
-}
-nav.tabs button.active{border-bottom-color:var(--green); color:var(--navy);}
-nav.tabs button:hover{color:var(--navy);}
-main{padding:24px 28px 60px; max-width:1360px; margin:0 auto;}
-.tab-content{display:none; animation:fadein .2s ease;}
-.tab-content.active{display:block;}
-@keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
-.card{
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  padding:18px 20px; margin-bottom:16px; box-shadow:var(--shadow-sm); transition:box-shadow .2s;
-}
-.card-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
-.card-header h3{margin:0; font-size:14px; color:var(--navy); font-weight:700; display:flex; align-items:center; gap:7px;}
-.card-header .hint{font-size:11.5px; color:var(--muted-light); font-weight:500;}
-button{font-family:inherit; border-radius:9px; cursor:pointer; transition:all .15s; font-weight:600; font-size:13px;}
-.btn{background:var(--green); color:#fff; border:1px solid var(--green); padding:9px 16px;}
-.btn:hover{background:var(--green-dark); border-color:var(--green-dark);}
-.btn.secondary{background:#fff; color:var(--navy); border:1px solid var(--border-strong);}
-.btn.secondary:hover{background:#F6F8FB; border-color:var(--navy-light);}
-.btn.ghost{background:transparent; color:var(--muted); border:1px solid transparent; padding:7px 10px;}
-.btn.ghost:hover{background:#F0F2F6; color:var(--navy);}
-.btn.danger{background:#fff; color:var(--red); border:1px solid #F3C1C1;}
-.btn.danger:hover{background:#FEF2F2;}
-.btn.sm{padding:6px 11px; font-size:12px;}
-.btn:disabled{opacity:.42; cursor:not-allowed; filter:none; transform:none;}
-.btn-block{width:100%;}
-input[type=text], textarea, select{
-  width:100%; padding:9px 12px; border:1px solid var(--border-strong); border-radius:9px;
-  font-size:13.5px; font-family:inherit; background:#fff; color:var(--text); transition:border-color .15s, box-shadow .15s;
-}
-input[type=text]:focus, textarea:focus, select:focus{outline:none; border-color:var(--indigo); box-shadow:0 0 0 3px rgba(79,70,229,.12);}
-textarea{min-height:130px; resize:vertical; line-height:1.5;}
-input:disabled, textarea:disabled, select:disabled{background:#F4F5F7; color:var(--muted-light); cursor:not-allowed;}
-label{font-size:11px; font-weight:700; color:var(--muted); display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px;}
-.badge{display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; color:#fff;}
-.badge.dev{background:var(--amber);}
-.badge.rev{background:var(--blue);}
-.badge.signed{background:var(--green);}
-.badge.none{background:#9AA2B1;}
-.badge.lock{background:#FDEBD0; color:#92400E; border:1px solid #F7D9A5;}
-.toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:4px;}
-.toolbar > div{flex:1; min-width:170px;}
-.workspace{display:grid; grid-template-columns: 1.65fr 1fr; gap:18px; align-items:start; margin-top:16px;}
-@media (max-width: 960px){ .workspace{grid-template-columns:1fr;} }
-.workspace-right{position:sticky; top:68px;}
-.modal-overlay{
-  position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000;
-  backdrop-filter:blur(3px);
-}
-.modal{
-  background:#fff; border-radius:var(--radius-lg); padding:34px; width:460px; max-width:92vw;
-  animation:modalIn .22s cubic-bezier(.2,.9,.3,1); box-shadow:var(--shadow-lg);
-}
-@keyframes modalIn{from{opacity:0; transform:scale(.95) translateY(6px);} to{opacity:1; transform:scale(1) translateY(0);}}
-.modal h2{margin:0 0 4px; color:var(--navy); font-size:21px;}
-.modal .step-label{color:var(--indigo); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; margin:18px 0 8px;}
-.role-btns{display:flex; gap:10px; margin:10px 0 4px;}
-.role-btns button{flex:1; padding:15px 10px; font-size:13.5px; border-radius:11px;}
-.hidden{display:none !important;}
-
-#resumeSyncBanner{
-  position:fixed; top:14px; right:14px; background:#FFF7ED; color:#9A3412; border:1px solid #FDBA74;
-  border-radius:30px; padding:7px 8px 7px 16px; font-size:12.5px; display:none; align-items:center; gap:10px; z-index:901;
-  box-shadow:var(--shadow-lg); font-weight:600;
-}
-#resumeSyncBanner button{background:#fff; color:var(--navy); border:1px solid var(--border-strong); padding:6px 14px; font-size:12px; border-radius:20px;}
-
-#recordingBanner{
-  position:fixed; top:0; left:0; right:0; background:var(--indigo); color:#fff; padding:9px 16px; font-size:12.5px;
-  display:none; align-items:center; justify-content:center; gap:12px; z-index:902; box-shadow:0 2px 10px rgba(0,0,0,.18); font-weight:600;
-}
-#recordingBanner button{background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.4); padding:5px 12px; font-size:11.5px;}
-
-.lock-banner{
-  display:flex; align-items:center; gap:8px; background:#FFF7ED; border:1px solid #FDE0B0; color:#92400E;
-  padding:9px 13px; border-radius:10px; font-size:12.5px; font-weight:600; margin-bottom:12px;
-}
-.detected-info{
-  margin-top:10px; padding:11px 15px; background:#ECFDF3; border:1px solid #A7E4B9; border-radius:10px;
-  font-size:13px; color:#166534; display:none; align-items:center; gap:8px; font-weight:500;
-}
-.detected-info.show{display:flex;}
-.detected-info strong{color:var(--navy);}
-.group-header{
-  display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px 13px; background:#F3F5F9;
-  border:1px solid var(--border); border-radius:10px; margin-top:8px; transition:background .15s;
-}
-.group-header:hover{background:#EAEDF3;}
-.group-header .chev{transition:transform .18s; display:inline-block; color:var(--muted-light); font-size:11px;}
-.group-header.expanded .chev{transform:rotate(90deg);}
-.group-body{padding-left:18px; display:none;}
-.group-body.open{display:block;}
-.video-group-header{
-  display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px 12px; background:#FAFBFD;
-  border:1px solid var(--border); border-radius:8px; margin-top:6px; font-size:12.5px; font-weight:600; transition:background .15s;
-}
-.video-group-header:hover{background:#F0F2F7;}
-
-table{width:100%; border-collapse:collapse; font-size:12.5px;}
-th,td{padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top;}
-th{background:#F8F9FB; font-weight:700; color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.4px;}
-tbody tr:hover td{background:#FAFBFD;}
-img.thumb{width:56px; border-radius:6px; cursor:pointer; border:1px solid var(--border); transition:transform .15s;}
-img.thumb:hover{transform:scale(1.1);}
-.lightbox{position:fixed; inset:0; background:rgba(0,0,0,.86); display:flex; align-items:center; justify-content:center; z-index:1200;}
-.lightbox img{max-width:90%; max-height:90%; border-radius:10px;}
-
-table.rv-comment-table{
-  table-layout: fixed;
-}
-table.rv-comment-table td, table.rv-comment-table th{
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-table.rv-comment-table select, table.rv-comment-table input[type=text]{
-  min-width: 0;
-}
-
-.stat-cards{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
-.stat-card{
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; min-width:130px;
-  box-shadow:var(--shadow-sm);
-}
-.stat-card .num{font-size:24px; font-weight:800; color:var(--navy);}
-.stat-card .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600;}
-video{width:100%; max-height:420px; background:#0a0e16; border-radius:10px; display:block;}
-.small-note{font-size:12px; color:var(--muted);}
-.flex-row{display:flex; gap:9px; align-items:center; flex-wrap:wrap;}
-.subtab-row{display:flex; gap:8px; margin-bottom:16px; background:#fff; padding:5px; border-radius:11px; border:1px solid var(--border); width:fit-content;}
-.subtab-row button{padding:8px 16px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-weight:600;}
-.subtab-row button.active{background:var(--navy); color:#fff;}
-.empty-state{text-align:center; padding:40px 20px; color:var(--muted-light);}
-.empty-state .icon{font-size:32px; margin-bottom:8px;}
-.checkbox-row label{display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:500; text-transform:none; color:var(--text); background:#F6F8FB; padding:6px 11px; border-radius:20px; border:1px solid var(--border); cursor:pointer;}
-.activity-item{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
-.activity-item:last-child{border-bottom:none;}
-.activity-icon{width:26px; height:26px; border-radius:50%; background:#EEF1F7; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0;}
-.activity-text strong{color:var(--navy);}
-.activity-time{color:var(--muted-light); font-size:11px; margin-top:1px;}
+  * { box-sizing: border-box; font-family: Segoe UI, Arial, sans-serif; }
+  body { margin:0; background:#f4f6f8; color:#222; }
+  #app { width:100%; min-height:100vh; padding:16px 24px; }
+  h1,h2,h3 { margin:0 0 10px 0; }
+  button { cursor:pointer; border:none; border-radius:6px; padding:8px 14px; font-size:14px; background:#2563eb; color:#fff; }
+  button:disabled { background:#9ca3af; cursor:not-allowed; }
+  button.secondary { background:#6b7280; }
+  button.danger { background:#dc2626; }
+  button.success { background:#16a34a; }
+  button.warn { background:#d97706; }
+  input[type=text], textarea, input[type=file], select { padding:8px; border:1px solid #ccc; border-radius:6px; width:100%; }
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; font-size:14px; }
+  th { background:#eef2f7; }
+  .badge { padding:3px 10px; border-radius:12px; font-size:12px; color:#fff; }
+  .b-pending_review{background:#64748b}.b-in_review{background:#2563eb}.b-reviewed{background:#0891b2}
+  .b-in_fix{background:#d97706}.b-fixed{background:#7c3aed}.b-in_validation{background:#2563eb}
+  .b-signed_off{background:#16a34a}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:#fff;padding:12px 18px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .video-col{flex:2;min-width:0}
+  .comments-col{flex:1.3;min-width:380px;max-height:85vh;overflow:auto;background:#fff;border-radius:8px;padding:12px}
+  video{width:100%;max-height:60vh;background:#000;border-radius:8px}
+  .comment-card{border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:10px;background:#fafafa}
+  .comment-card img{width:100%;border-radius:6px;margin:6px 0}
+  .meta{font-size:12px;color:#666}
+  .entry-box{display:flex;gap:8px;margin-bottom:14px;align-items:flex-start;background:#fff;padding:10px;border-radius:8px;border:1px solid #e5e7eb}
+  .obs-card{background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;padding:8px;margin-bottom:8px}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:50}
+  .modal{background:#fff;padding:20px;border-radius:8px;max-width:500px;width:90%}
+  .center-card{max-width:480px;margin:60px auto;background:#fff;padding:24px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .role-btn{flex:1;padding:16px;text-align:center;border:2px solid #ddd;border-radius:8px;cursor:pointer}
+  .role-btn.active{border-color:#2563eb;background:#eff6ff}
+  .toast{position:fixed;bottom:20px;right:20px;background:#111;color:#fff;padding:10px 16px;border-radius:6px;z-index:100;opacity:.95}
+  .lockmsg{color:#b91c1c;font-weight:600}
+  .small{font-size:12px;color:#666}
+  .flexgap{display:flex;gap:8px;flex-wrap:wrap}
+  .filter-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .filter-row > div{flex:1;min-width:160px}
 </style>
 </head>
 <body>
-
-<div id="recordingBanner">🎤 Recording… <span id="recCountdown">02:00</span> <button id="stopRecFromBanner">Stop</button></div>
-<div id="resumeSyncBanner"><span>⚠️</span> Live sync paused — click to Resume Live Sync <button id="resumeSyncBtn">Resume</button></div>
-
-<header class="app-header">
-  <div class="brand">
-    <div class="logo">🎬</div>
-    <div>
-      <h1>Video Review & Comment Logger</h1>
-      <div class="tagline">Collaborative QA tracking for training videos</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="header-sync" id="headerSync">
-      <span class="dot"></span><span id="syncText">Next read: 2s / Next write: 3s</span>
-    </div>
-    <div class="user-chip" id="headerUserInfo" style="display:none;">
-      <div class="avatar" id="userAvatar">–</div>
-      <div>
-        <div id="userNameDisplay" style="font-weight:700;"></div>
-        <div class="role-pill" id="userRoleDisplay"></div>
-      </div>
-    </div>
-  </div>
-</header>
-
-<nav class="tabs" id="tabNav">
-  <button data-tab="home" class="active">👋 Home</button>
-  <button data-tab="dashboard">📊 Dashboard</button>
-  <button data-tab="newreview">📝 New Review</button>
-  <button data-tab="validations">✅ Review Validations</button>
-</nav>
-
-<main>
-  <section class="tab-content active" id="tab-home">
-    <div class="card">
-      <h2 style="margin-top:0;">👋 Welcome</h2>
-      <p class="small-note" style="font-size:13.5px; color:var(--text);">This tool helps Reviewers and NIIT Developers collaborate on training-video QA using a local Excel file as the shared data store — no backend server required.</p>
-      <ul style="font-size:13.5px; line-height:1.9;">
-        <li>📂 <strong>Reviewers</strong> log timestamped comments (text or 🎤 voice) while watching a video, then mark issues "Approved" once fixes are verified.</li>
-        <li>🛠️ <strong>Developers</strong> view comments read-only, mark items "Fixed by NIIT", and add follow-up notes.</li>
-        <li>🔒 <strong>Video Locking</strong>: a video locks automatically for the Reviewer the moment they log their <em>first comment</em> on it — Developers cannot edit any row on that video until the Reviewer clicks "Review Complete – Stamp & Sync", which releases the lock. The same applies in reverse for Developers marking "Fixed by NIIT". Locks also auto-expire after ~90s of inactivity as a safety net for crashed/abandoned sessions.</li>
-        <li>🕑 <strong>Activity Log</strong>: every action is timestamped and visible in Review Validations.</li>
-        <li>🔄 <strong>Live Sync</strong> (Chrome/Edge only): re-reads the file every 2s and writes every 3s (plus immediately after any action you take), merging only the rows/locks that changed.</li>
-        <li>⚠️ Live sync only works between sessions sharing the exact same local file handle.</li>
-        <li>🔍 Reviewers can run an Auto-Scan that OCRs frame corners across the video looking for URLs.</li>
-        <li>Browsers cannot read your system username, so please enter your name at setup.</li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="tab-content" id="tab-dashboard">
-    <div class="subtab-row">
-      <button class="active" data-subtab="reviewerView">Reviewer View</button>
-      <button data-subtab="developerView">Developer View</button>
-      <button data-subtab="overview">Overview</button>
-    </div>
-    <div id="dash-reviewerView" class="dash-sub"></div>
-    <div id="dash-developerView" class="dash-sub hidden"></div>
-    <div id="dash-overview" class="dash-sub hidden"></div>
-  </section>
-
-  <section class="tab-content" id="tab-newreview">
-    <div id="nr-devNote" class="card hidden">🛠️ This tab is Reviewer-only for adding comments. You can browse videos and view existing comments in Review Validations.</div>
-
-    <div class="card">
-      <div class="toolbar">
-        <div><label>Application</label><select id="nr-appFilter"></select></div>
-        <div><label>Video</label><select id="nr-videoFilter"></select></div>
-        <div style="flex:0;"><button class="btn secondary" id="nr-browseBtn">📂 Browse Video File</button></div>
-      </div>
-      <div class="detected-info" id="nr-detectedInfo">
-        ✅ Detected — <strong>Application:</strong>&nbsp;<span id="nr-detectedApp">—</span>&nbsp;&nbsp;
-        <strong>Video Name:</strong>&nbsp;<span id="nr-detectedVideo">—</span>
-      </div>
-    </div>
-
-    <div id="nr-lockBanner" class="lock-banner hidden" style="margin:0 0 16px;"></div>
-
-    <div class="workspace">
-      <div class="workspace-left">
-        <div class="card">
-          <video id="nr-video" controls></video>
-          <div class="flex-row" style="margin-top:12px;">
-            <button class="btn secondary" id="nr-prevBtn">⏮ Prev Issue</button>
-            <button class="btn secondary" id="nr-nextBtn">⏭ Next Issue</button>
-            <button class="btn secondary" id="nr-quickActionBtn">Quick Action</button>
-            <button class="btn" id="nr-reviewCompleteBtn">✔ Review Complete – Stamp & Sync</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h3>💬 Current Comment</h3></div>
-          <div id="nr-currentComment" class="small-note">No comment selected. Use Prev/Next.</div>
-        </div>
-      </div>
-
-      <div class="workspace-right">
-        <div class="card" id="nr-addCommentCard">
-          <div class="card-header"><h3>➕ Add Comment</h3></div>
-          <button class="btn secondary btn-block" id="nr-autoScanBtn">🔍 Auto-Scan for URLs</button>
-          <div id="nr-scanResults"></div>
-          <div style="margin-top:14px;">
-            <label>Comment</label>
-            <textarea id="nr-commentText" placeholder="Describe the issue..."></textarea>
-          </div>
-          <div class="flex-row" style="margin-top:10px;">
-            <button class="btn secondary" id="nr-startRec">🎤 Start Recording</button>
-            <button class="btn secondary" id="nr-stopRec" disabled>⏹ Stop Recording</button>
-          </div>
-          <button class="btn btn-block" id="nr-addCommentBtn" style="margin-top:12px;">Add Comment</button>
-        </div>
-
-        <div class="card">
-          <div class="card-header"><h3>🕑 Recently Logged</h3></div>
-          <table id="nr-recentTable">
-            <thead><tr><th>Time</th><th>Shot</th><th>Comment</th><th>By</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="tab-content" id="tab-validations">
-    <div class="card">
-      <div class="toolbar">
-        <div><label>Application</label><select id="rv-appFilter"></select></div>
-        <div><label>Video</label><select id="rv-videoFilter"></select></div>
-        <div><label>Status</label><select id="rv-statusFilter">
-          <option value="">All</option>
-          <option value="Ready for Developer">Ready for Developer</option>
-          <option value="Ready for Reviewer">Ready for Reviewer</option>
-          <option value="Signed Off">Signed Off</option>
-          <option value="No comments">No comments</option>
-        </select></div>
-        <div style="flex:0;"><button class="btn secondary" id="rv-browseBtn">📂 Browse Video File</button></div>
-      </div>
-      <div id="rv-devPrompt" class="empty-state hidden">
-        <div class="icon">🛠️</div>
-        Please select an Application and Video above to view comments.
-      </div>
-    </div>
-
-    <div id="rv-lockBanner" class="lock-banner hidden"></div>
-
-    <div class="workspace" id="rv-workspace">
-      <div class="workspace-left">
-        <div class="card" id="rv-playerWrap">
-          <video id="rv-video" controls></video>
-          <div class="flex-row" style="margin-top:12px;">
-            <button class="btn secondary" id="rv-prevBtn">⏮ Prev Issue</button>
-            <button class="btn secondary" id="rv-nextBtn">⏭ Next Issue</button>
-            <button class="btn" id="rv-quickActionBtn">Quick Action</button>
-            <button class="btn" id="rv-reviewCompleteBtn">✔ Review Complete – Stamp & Sync</button>
-          </div>
-        </div>
-        <div class="card" id="rv-currentCard">
-          <div class="card-header"><h3>💬 Current Comment</h3></div>
-          <div id="rv-currentComment" class="small-note">No comment selected. Use Prev/Next or click a timestamp.</div>
-        </div>
-        <div class="card" id="rv-activeCard">
-          <div class="card-header">
-            <h3>📋 Active Comments</h3>
-            <div><button class="btn ghost sm" id="rv-expandAll">Expand All</button> <button class="btn ghost sm" id="rv-collapseAll">Collapse All</button></div>
-          </div>
-          <div id="rv-activeGroups"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h3>✅ Signed-Off Videos</h3></div>
-          <table><thead><tr><th>Application</th><th>Video</th><th>Total</th><th>Approved</th><th></th></tr></thead>
-            <tbody id="rv-signedOffTable"></tbody></table>
-        </div>
-        <div class="card">
-          <div class="card-header"><h3>🕑 Activity Log</h3><span class="hint">Most recent actions across all sessions</span></div>
-          <div id="rv-activityLog"></div>
-        </div>
-      </div>
-
-      <div class="workspace-right">
-        <div class="card" id="rv-addCommentCard">
-          <div class="card-header"><h3>➕ Add Comment</h3></div>
-          <button class="btn secondary btn-block" id="rv-autoScanBtn">🔍 Auto-Scan for URLs</button>
-          <div id="rv-scanResults"></div>
-          <div style="margin-top:14px;">
-            <label>Comment</label>
-            <textarea id="rv-commentText" placeholder="Describe the issue..."></textarea>
-          </div>
-          <div class="flex-row" style="margin-top:10px;">
-            <button class="btn secondary" id="rv-startRec">🎤 Start Recording</button>
-            <button class="btn secondary" id="rv-stopRec" disabled>⏹ Stop Recording</button>
-          </div>
-          <button class="btn btn-block" id="rv-addCommentBtn" style="margin-top:12px;">Add Comment</button>
-        </div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<div class="modal-overlay" id="setupModal">
-  <div class="modal">
-    <h2>Get started</h2>
-    <p class="small-note">Set up your session to begin reviewing or fixing training videos.</p>
-    <div class="step-label">Step 1 · Who are you?</div>
-    <div class="role-btns">
-      <button class="btn" id="roleReviewerBtn">I'm a Reviewer</button>
-      <button class="btn secondary" id="roleDevBtn">I'm a Developer (NIIT)</button>
-    </div>
-    <div id="nameSection" class="hidden">
-      <div class="step-label">Step 2 · Your name</div>
-      <input type="text" id="userNameInput" placeholder="Your name — shown on changes you make" required>
-    </div>
-    <div id="fileSection" class="hidden">
-      <div class="step-label">Step 3 · Spreadsheet</div>
-      <div class="flex-row">
-        <button class="btn secondary" id="downloadTemplateBtn">⬇ Download Blank Template</button>
-        <button class="btn" id="importSpreadsheetBtn">📂 Import Spreadsheet</button>
-      </div>
-      <input type="file" id="fallbackFileInput" accept=".xlsx" class="hidden">
-    </div>
-  </div>
-</div>
-
+<div id="app"></div>
+<input type="file" id="videoFileInput" accept="video/mp4" hidden>
 <script>
-/* ============================= GLOBAL STATE ============================= */
-const SCHEMA = ["CommentID","Application","VideoName","Timestamp","TimestampDisplay","Frame","CommentText",
-"InputType","CreatedBy","CreatedAt","FixedByNIIT","ApprovedByReviewer","AutoDetected",
-"FollowUpNotes","ScreenshotDataUrl","_LastModified","_LastModifiedBy","_LastModifiedAt"];
-const LOCK_SCHEMA = ["Application","VideoName","LockedBy","LockedRole","LockedAt","ExpiresAt"];
-const ACTIVITY_SCHEMA = ["ActivityID","TimestampEpoch","Timestamp","User","Role","Action","Application","VideoName","Details"];
-const LOCK_TTL_MS = 90 * 1000;
+/* ============== STATE ============== */
+let state = { videos: [], __lastModified: null };
+let fileHandle = null;
+let useLocalStorageFallback = false;
+let currentUser = { name:'', role:'' };
+let screen = 'init';
+let activeVideoId = null;
+let pendingObservations = [];
+let scanAbort = false;
+let recognition = null;
+let activeCommentIndex = 0;
 
-let state = {
-  role: null, userName: '', comments: [],
-  config: {ReadMeLink:'', ReviewCompletedAt:'', ReviewCompletedBy:''},
-  fileHandle: null, usingFSApi: false, deletedIds: new Set(),
-  sessionId: Math.random().toString(36).slice(2),
-  expandedGroups: new Set(), expandedVideoGroups: new Set(),
-  isTypingNow: false, currentCommentIdNR: null, currentCommentIdRV: null,
-  locks: [], activityLog: [],
-  releasedLocks: new Set(),
-};
+let videoSrcCache = {};
+let videoTimeCache = {};
+function cacheKey(v) { return v.id + '_r' + v.round; }
 
-function uid(){ return 'c_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
-function touchComment(row){ row._LastModified = Date.now(); row._LastModifiedBy = state.userName; row._LastModifiedAt = new Date().toISOString(); }
+let statusFilters = { app:'', status:'', videoSearch:'' };
 
-/* ============================= ACTIVITY LOG ============================= */
-function logActivity(action, app, video, details){
-  const entry = {
-    ActivityID: uid(), TimestampEpoch: Date.now(), Timestamp: new Date().toISOString(),
-    User: state.userName, Role: state.role, Action: action,
-    Application: app||'', VideoName: video||'', Details: details||''
-  };
-  state.activityLog.unshift(entry);
-  if(state.activityLog.length > 300) state.activityLog.length = 300;
-}
-function timeAgo(epoch){
-  const diff = Math.max(0, Date.now() - epoch);
-  const s = Math.floor(diff/1000);
-  if(s < 60) return s + 's ago';
-  const m = Math.floor(s/60); if(m < 60) return m + 'm ago';
-  const h = Math.floor(m/60); if(h < 24) return h + 'h ago';
-  const d = Math.floor(h/24); return d + 'd ago';
-}
-function activityIcon(action){
-  if(action.includes('Lock')) return '🔒';
-  if(action.includes('Fixed')) return '🛠️';
-  if(action.includes('Approved')) return '✅';
-  if(action.includes('Deleted')) return '🗑️';
-  if(action.includes('Added')) return '➕';
-  if(action.includes('Edited')) return '✏️';
-  if(action.includes('Rollback')) return '↩️';
-  if(action.includes('Review Complete')) return '🏁';
-  return '•';
-}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const nowStr = () => new Date().toLocaleString();
 
-/* ============================= LOCKING ============================= */
-function getActiveLock(app, video){
-  if(!app || !video) return null;
-  const now = Date.now();
-  return state.locks.find(l=>l.Application===app && l.VideoName===video && l.ExpiresAt > now) || null;
-}
-function isLockedByOtherRole(app, video){
-  const lock = getActiveLock(app, video);
-  if(lock && lock.LockedRole !== state.role) return lock;
-  return null;
-}
-function tryAcquireLockForAction(app, video){
-  if(!app || !video) return;
-  const key = app+'||'+video;
-  state.releasedLocks.delete(key);
-  const now = Date.now();
-  let lock = state.locks.find(l=>l.Application===app && l.VideoName===video);
-  if(!lock){
-    lock = {Application:app, VideoName:video, LockedBy:state.userName, LockedRole:state.role, LockedAt:new Date().toISOString(), ExpiresAt: now+LOCK_TTL_MS};
-    state.locks.push(lock);
-    logActivity('Lock Acquired', app, video, `${state.userName} (${state.role}) started ${state.role==='Reviewer'?'reviewing':'fixing'} this video`);
-  } else if(lock.LockedBy===state.userName && lock.LockedRole===state.role){
-    lock.ExpiresAt = now + LOCK_TTL_MS;
-  } else if(lock.ExpiresAt <= now){
-    lock.LockedBy = state.userName; lock.LockedRole = state.role; lock.LockedAt = new Date().toISOString(); lock.ExpiresAt = now+LOCK_TTL_MS;
-    logActivity('Lock Acquired', app, video, `${state.userName} (${state.role}) took over an expired lock`);
-  }
-}
-function releaseLock(app, video){
-  if(!app || !video) return;
-  const idx = state.locks.findIndex(l=>l.Application===app && l.VideoName===video && l.LockedBy===state.userName && l.LockedRole===state.role);
-  if(idx > -1){
-    state.locks.splice(idx,1);
-    state.releasedLocks.add(app+'||'+video);
-    logActivity('Lock Released', app, video, `${state.userName} (${state.role}) completed review/fix and released the lock`);
-  }
-}
-function renewAllMyLocks(){
-  const now = Date.now();
-  state.locks.forEach(l=>{
-    if(l.LockedBy===state.userName && l.LockedRole===state.role){
-      l.ExpiresAt = now + LOCK_TTL_MS;
+/* ============== PERSISTENCE ============== */
+async function pickFile(create) {
+  try {
+    if (create) {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'video-review-data.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      state = { videos: [], __lastModified: null };
+      await saveState();
+    } else {
+      [fileHandle] = await window.showOpenFilePicker({
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      await loadState();
     }
-  });
-}
-function mergeLocks(diskLocks){
-  const now = Date.now();
-  const resultMap = new Map();
-  diskLocks.forEach(dl=>{
-    if(!dl.Application || !(dl.ExpiresAt > now)) return;
-    const key = dl.Application+'||'+dl.VideoName;
-    if(state.releasedLocks.has(key) && dl.LockedBy===state.userName && dl.LockedRole===state.role){
-      return;
+    toast('Data file connected: ' + fileHandle.name);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      useLocalStorageFallback = true;
+      toast('File System API unavailable — using browser local storage fallback');
+      const saved = localStorage.getItem('vrt_data');
+      state = saved ? JSON.parse(saved) : { videos: [], __lastModified: Date.now() };
     }
-    resultMap.set(key, dl);
-  });
-  state.locks.forEach(l=>{
-    if(l.LockedBy===state.userName && l.LockedRole===state.role && l.ExpiresAt > now){
-      const key = l.Application+'||'+l.VideoName;
-      if(!state.releasedLocks.has(key)){
-        resultMap.set(key, l);
-      }
-    }
-  });
-  state.locks = [...resultMap.values()];
-}
-function lockBadgeHtml(app, video){
-  const lock = getActiveLock(app, video);
-  if(!lock) return '';
-  const mine = lock.LockedBy===state.userName && lock.LockedRole===state.role;
-  return `<span class="badge lock">🔒 ${mine? 'You' : lock.LockedBy} (${lock.LockedRole})</span>`;
-}
-
-/* ============================= APP NAME PARSING ============================= */
-function parseAppAndVideo(filenameOrName){
-  const idx = filenameOrName.toLowerCase().indexOf('video');
-  if(idx === -1) return null;
-  let app = filenameOrName.slice(0, idx).replace(/[_\-\s]+$/,'').trim();
-  let vid = filenameOrName.slice(idx).trim();
-  return {app, vid};
-}
-
-/* ============================= TIMESTAMP HANDLING ============================= */
-function secondsToDisplay(sec){
-  sec = Math.max(0, sec||0);
-  const m = Math.floor(sec/60);
-  const s = (sec - m*60).toFixed(1);
-  return `${String(m).padStart(2,'0')}:${s.padStart(4,'0')}`;
-}
-function parseFlexibleTimestamp(text){
-  if(typeof text === 'number') return text;
-  if(!text) return 0;
-  text = String(text).trim();
-  if(/^\d+(\.\d+)?$/.test(text)) return parseFloat(text);
-  const parts = text.split(':').map(p=>parseFloat(p));
-  if(parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
-  if(parts.length === 2) return parts[0]*60 + parts[1];
-  return 0;
-}
-
-/* ============================= SETUP MODAL ============================= */
-const setupModal = document.getElementById('setupModal');
-const roleReviewerBtn = document.getElementById('roleReviewerBtn');
-const roleDevBtn = document.getElementById('roleDevBtn');
-const nameSection = document.getElementById('nameSection');
-const fileSection = document.getElementById('fileSection');
-const userNameInput = document.getElementById('userNameInput');
-
-function selectRole(role){
-  state.role = role;
-  if(role === 'Reviewer'){ roleReviewerBtn.classList.remove('secondary'); roleDevBtn.classList.add('secondary'); }
-  else { roleDevBtn.classList.remove('secondary'); roleReviewerBtn.classList.add('secondary'); }
-  nameSection.classList.remove('hidden');
-}
-roleReviewerBtn.onclick = ()=>selectRole('Reviewer');
-roleDevBtn.onclick = ()=>selectRole('Developer');
-userNameInput.addEventListener('input', ()=>{
-  state.userName = userNameInput.value.trim();
-  fileSection.classList.toggle('hidden', !state.userName);
-});
-
-document.getElementById('downloadTemplateBtn').onclick = ()=>{
-  const wb = buildWorkbook([], {}, [], []);
-  XLSX.writeFile(wb, 'VideoReviewTemplate.xlsx');
-};
-
-function buildWorkbook(comments, config, locks, activityLog){
-  const wb = XLSX.utils.book_new();
-
-  const wsComments = XLSX.utils.json_to_sheet([], {header: SCHEMA});
-  XLSX.utils.sheet_add_aoa(wsComments, [SCHEMA], {origin:'A1'});
-  if(comments.length) XLSX.utils.sheet_add_json(wsComments, comments, {header:SCHEMA, skipHeader:true, origin:'A2'});
-  XLSX.utils.book_append_sheet(wb, wsComments, 'Comments');
-
-  const configRows = Object.entries(config||{}).map(([k,v])=>({Key:k, Value:v}));
-  const wsConfig = XLSX.utils.json_to_sheet(configRows.length?configRows:[{Key:'ReadMeLink',Value:''}]);
-  XLSX.utils.book_append_sheet(wb, wsConfig, 'Config');
-
-  const wsLocks = XLSX.utils.json_to_sheet([], {header: LOCK_SCHEMA});
-  XLSX.utils.sheet_add_aoa(wsLocks, [LOCK_SCHEMA], {origin:'A1'});
-  if(locks && locks.length) XLSX.utils.sheet_add_json(wsLocks, locks, {header:LOCK_SCHEMA, skipHeader:true, origin:'A2'});
-  XLSX.utils.book_append_sheet(wb, wsLocks, 'Locks');
-
-  const wsActivity = XLSX.utils.json_to_sheet([], {header: ACTIVITY_SCHEMA});
-  XLSX.utils.sheet_add_aoa(wsActivity, [ACTIVITY_SCHEMA], {origin:'A1'});
-  if(activityLog && activityLog.length) XLSX.utils.sheet_add_json(wsActivity, activityLog, {header:ACTIVITY_SCHEMA, skipHeader:true, origin:'A2'});
-  XLSX.utils.book_append_sheet(wb, wsActivity, 'Activity');
-
-  return wb;
-}
-
-document.getElementById('importSpreadsheetBtn').onclick = async ()=>{
-  if(!state.userName){ alert('Please enter your name first.'); return; }
-  if(window.showOpenFilePicker){
-    try{
-      const [handle] = await window.showOpenFilePicker({types:[{description:'Excel', accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
-      state.fileHandle = handle; state.usingFSApi = true;
-      const file = await handle.getFile();
-      await loadWorkbookFromFile(file);
-      finishImport();
-    }catch(e){ console.warn('File picker cancelled or failed', e); }
-  } else {
-    document.getElementById('fallbackFileInput').click();
-  }
-};
-document.getElementById('fallbackFileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files[0]; if(!file) return;
-  state.usingFSApi = false;
-  await loadWorkbookFromFile(file);
-  finishImport();
-});
-
-async function loadWorkbookFromFile(file){
-  const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, {type:'array'});
-
-  const wsComments = wb.Sheets['Comments'];
-  let rows = wsComments ? XLSX.utils.sheet_to_json(wsComments, {defval:''}) : [];
-  rows.forEach(r=>{
-    if(!r.Application && r.VideoName){
-      const parsed = parseAppAndVideo(r.VideoName);
-      if(parsed){ r.Application = parsed.app; r.VideoName = parsed.vid; }
-    }
-    if(!r.CommentID) r.CommentID = uid();
-    r.Timestamp = parseFlexibleTimestamp(r.Timestamp || r.TimestampDisplay || 0);
-    r.TimestampDisplay = secondsToDisplay(r.Timestamp);
-    r._LastModified = r._LastModified ? Number(r._LastModified) : 0;
-  });
-  state.comments = rows;
-
-  const wsConfig = wb.Sheets['Config'];
-  const configRows = wsConfig ? XLSX.utils.sheet_to_json(wsConfig, {defval:''}) : [];
-  state.config = {};
-  configRows.forEach(r=>{ state.config[r.Key] = r.Value; });
-
-  const now = Date.now();
-  const wsLocks = wb.Sheets['Locks'];
-  const lockRows = wsLocks ? XLSX.utils.sheet_to_json(wsLocks, {defval:''}) : [];
-  state.locks = lockRows.map(l=>({...l, ExpiresAt: Number(l.ExpiresAt)||0})).filter(l=>l.ExpiresAt > now && l.Application);
-
-  const wsActivity = wb.Sheets['Activity'];
-  const activityRows = wsActivity ? XLSX.utils.sheet_to_json(wsActivity, {defval:''}) : [];
-  state.activityLog = activityRows.map(a=>({...a, TimestampEpoch: Number(a.TimestampEpoch)||0}))
-    .sort((a,b)=>b.TimestampEpoch - a.TimestampEpoch).slice(0,300);
-}
-
-function finishImport(){
-  setupModal.classList.add('hidden');
-  document.getElementById('headerUserInfo').style.display = 'flex';
-  document.getElementById('userAvatar').textContent = state.userName.slice(0,2).toUpperCase();
-  document.getElementById('userNameDisplay').textContent = state.userName;
-  document.getElementById('userRoleDisplay').textContent = state.role;
-  renderAll();
-  if(state.usingFSApi){
-    document.getElementById('headerSync').style.display = 'flex';
-    scheduleReadCycle();
-    scheduleWriteCycle();
   }
 }
 
-/* ============================= TAB NAVIGATION ============================= */
-document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(tc=>tc.classList.remove('active'));
-    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab === 'dashboard') renderDashboard();
-    if(btn.dataset.tab === 'newreview') renderNewReview();
-    if(btn.dataset.tab === 'validations'){ resetValidationFilters(); renderValidations(); }
-  });
-});
-
-document.querySelectorAll('[data-subtab]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('[data-subtab]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.dash-sub').forEach(s=>s.classList.add('hidden'));
-    document.getElementById('dash-'+btn.dataset.subtab).classList.remove('hidden');
-  });
-});
-
-/* ============================= STATUS LOGIC ============================= */
-function getVideoGroups(){
-  const map = {};
-  state.comments.filter(c=>!state.deletedIds.has(c.CommentID)).forEach(c=>{
-    map[c.Application] = map[c.Application] || {};
-    map[c.Application][c.VideoName] = map[c.Application][c.VideoName] || [];
-    map[c.Application][c.VideoName].push(c);
-  });
-  return map;
-}
-function computeStatus(comments){
-  if(!comments || comments.length === 0) return 'No comments';
-  const allFixed = comments.every(c=> String(c.FixedByNIIT).toLowerCase() === 'yes');
-  const allApproved = comments.every(c=> String(c.ApprovedByReviewer).toLowerCase() === 'yes');
-  if(allApproved) return 'Signed Off';
-  if(allFixed) return 'Ready for Reviewer';
-  return 'Ready for Developer';
-}
-
-/* ============================= GROUPING RENDER HELPER ============================= */
-function makeGroupKey(prefix, app){ return prefix+'::'+app; }
-
-function renderGroupedList(container, listId, appMap, opts){
-  container.innerHTML = '';
-  const wrapper = document.createElement('div');
-
-  const controls = document.createElement('div');
-  controls.className = 'flex-row'; controls.style.marginBottom = '10px';
-  const expandBtn = document.createElement('button'); expandBtn.className='btn ghost sm'; expandBtn.textContent='Expand All';
-  const collapseBtn = document.createElement('button'); collapseBtn.className='btn ghost sm'; collapseBtn.textContent='Collapse All';
-  controls.appendChild(expandBtn); controls.appendChild(collapseBtn);
-  wrapper.appendChild(controls);
-
-  const apps = Object.keys(appMap).filter(a=> !opts.filterApps || opts.filterApps.size===0 || opts.filterApps.has(a)).sort();
-
-  let totalVisible = 0;
-  apps.forEach(app=>{
-    const videos = appMap[app];
-    const videoNames = Object.keys(videos);
-    let counts = {dev:0, rev:0, signed:0, none:0};
-    const visibleVideos = [];
-    videoNames.forEach(vn=>{
-      const comments = videos[vn];
-      const status = computeStatus(comments);
-      if(opts.filterStatus && opts.filterStatus.size>0 && !opts.filterStatus.has(status)) return;
-      if(opts.excludeSignedOff && status === 'Signed Off') return;
-      if(opts.onlyStatus && status !== opts.onlyStatus) return;
-      if(status === 'Ready for Developer') counts.dev++;
-      else if(status === 'Ready for Reviewer') counts.rev++;
-      else if(status === 'Signed Off') counts.signed++;
-      else counts.none++;
-      visibleVideos.push({vn, comments, status});
-    });
-    if(visibleVideos.length === 0) return;
-    totalVisible += visibleVideos.length;
-
-    const groupKey = makeGroupKey(listId, app);
-    const header = document.createElement('div');
-    header.className = 'group-header' + (state.expandedGroups.has(groupKey)?' expanded':'');
-    header.innerHTML = `<span class="chev">▶</span><strong>${app}</strong>
-      ${counts.dev?`<span class="badge dev">${counts.dev} Dev</span>`:''}
-      ${counts.rev?`<span class="badge rev">${counts.rev} Reviewer</span>`:''}
-      ${counts.signed?`<span class="badge signed">${counts.signed} Signed Off</span>`:''}
-      ${counts.none?`<span class="badge none">${counts.none} No comments</span>`:''}`;
-    const body = document.createElement('div');
-    body.className = 'group-body' + (state.expandedGroups.has(groupKey)?' open':'');
-
-    header.addEventListener('click', ()=>{
-      if(state.expandedGroups.has(groupKey)) state.expandedGroups.delete(groupKey);
-      else state.expandedGroups.add(groupKey);
-      header.classList.toggle('expanded');
-      body.classList.toggle('open');
-    });
-
-    visibleVideos.forEach(({vn,comments,status})=>{
-      if(opts.showVideoSubgroups){
-        const vKey = groupKey+'::'+vn;
-        const vHeader = document.createElement('div');
-        vHeader.className = 'video-group-header' + (state.expandedVideoGroups.has(vKey)?' expanded':'');
-        vHeader.innerHTML = `<span class="chev">▶</span><strong>${vn}</strong> <span class="small-note">(${status})</span> ${lockBadgeHtml(app, vn)}`;
-        const vBody = document.createElement('div');
-        vBody.className = 'group-body' + (state.expandedVideoGroups.has(vKey)?' open':'');
-        vBody.appendChild(opts.rowRenderer(app, vn, comments, status));
-        vHeader.addEventListener('click', (e)=>{
-          e.stopPropagation();
-          if(state.expandedVideoGroups.has(vKey)) state.expandedVideoGroups.delete(vKey);
-          else state.expandedVideoGroups.add(vKey);
-          vHeader.classList.toggle('expanded');
-          vBody.classList.toggle('open');
-        });
-        body.appendChild(vHeader); body.appendChild(vBody);
-      } else {
-        body.appendChild(opts.rowRenderer(app, vn, comments, status));
-      }
-    });
-
-    wrapper.appendChild(header); wrapper.appendChild(body);
-  });
-
-  if(totalVisible === 0){
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-    empty.innerHTML = `<div class="icon">📭</div>Nothing to show here right now.`;
-    wrapper.appendChild(empty);
-  }
-
-  expandBtn.onclick = ()=>{
-    wrapper.querySelectorAll('.group-header').forEach(h=>h.classList.add('expanded'));
-    wrapper.querySelectorAll('.group-body').forEach(b=>b.classList.add('open'));
-    apps.forEach(app=>state.expandedGroups.add(makeGroupKey(listId, app)));
-  };
-  collapseBtn.onclick = ()=>{
-    wrapper.querySelectorAll('.group-header').forEach(h=>h.classList.remove('expanded'));
-    wrapper.querySelectorAll('.group-body').forEach(b=>b.classList.remove('open'));
-    apps.forEach(app=>state.expandedGroups.delete(makeGroupKey(listId, app)));
-  };
-
-  container.appendChild(wrapper);
-}
-
-/* ============================= DASHBOARD ============================= */
-function renderDashboard(){
-  const appMap = getVideoGroups();
-  renderGroupedList(document.getElementById('dash-reviewerView'), 'revView', appMap, {
-    onlyStatus: 'Ready for Reviewer',
-    rowRenderer: (app, vn, comments)=>{
-      const div = document.createElement('div');
-      div.className = 'flex-row'; div.style.justifyContent='space-between'; div.style.padding='8px 0';
-      div.innerHTML = `<span>${vn} <span class="small-note">(${comments.length} comments)</span></span>`;
-      const btn = document.createElement('button'); btn.className='btn sm'; btn.textContent='Validate Fixes';
-      btn.onclick = ()=> jumpToValidation(app, vn);
-      div.appendChild(btn);
-      return div;
-    }
-  });
-  renderGroupedList(document.getElementById('dash-developerView'), 'devView', appMap, {
-    onlyStatus: 'Ready for Developer',
-    rowRenderer: (app, vn, comments)=>{
-      const div = document.createElement('div');
-      div.className = 'flex-row'; div.style.justifyContent='space-between'; div.style.padding='8px 0';
-      div.innerHTML = `<span>${vn} <span class="small-note">(${comments.length} comments)</span></span>`;
-      const btn = document.createElement('button'); btn.className='btn sm'; btn.textContent='Fix Issues';
-      btn.onclick = ()=> jumpToValidation(app, vn);
-      div.appendChild(btn);
-      return div;
-    }
-  });
-  renderOverview(appMap);
-}
-
-function renderOverview(appMap){
-  const container = document.getElementById('dash-overview');
-  container.innerHTML = '';
-  const apps = Object.keys(appMap);
-  const allStatuses = ['Ready for Developer','Ready for Reviewer','Signed Off','No comments'];
-
-  const filterPanel = document.createElement('div');
-  filterPanel.className = 'card';
-  filterPanel.innerHTML = `<label>Filter by Application</label><div id="ov-appChecks" class="flex-row checkbox-row" style="margin-bottom:14px;"></div>
-    <label>Filter by Status</label><div id="ov-statusChecks" class="flex-row checkbox-row"></div>`;
-  container.appendChild(filterPanel);
-
-  const appChecks = filterPanel.querySelector('#ov-appChecks');
-  apps.forEach(a=>{
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${a}" class="ov-app-check"> ${a}`;
-    appChecks.appendChild(label);
-  });
-  const statusChecks = filterPanel.querySelector('#ov-statusChecks');
-  allStatuses.forEach(s=>{
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${s}" class="ov-status-check"> ${s}`;
-    statusChecks.appendChild(label);
-  });
-
-  const statCards = document.createElement('div');
-  statCards.className = 'stat-cards';
-  container.appendChild(statCards);
-  const listDiv = document.createElement('div');
-  container.appendChild(listDiv);
-
-  function update(){
-    const selectedApps = new Set([...filterPanel.querySelectorAll('.ov-app-check:checked')].map(c=>c.value));
-    const selectedStatuses = new Set([...filterPanel.querySelectorAll('.ov-status-check:checked')].map(c=>c.value));
-    let totalVideos = 0, filteredCount = 0;
-    apps.forEach(a=> totalVideos += Object.keys(appMap[a]).length );
-
-    renderGroupedList(listDiv, 'overview', appMap, {
-      filterApps: selectedApps, filterStatus: selectedStatuses,
-      rowRenderer: (app, vn, comments, status)=>{
-        filteredCount++;
-        const div = document.createElement('div');
-        div.style.padding='8px 0';
-        div.innerHTML = `<span>${vn} <span class="small-note">(${status}, ${comments.length} comments)</span></span>`;
-        return div;
-      }
-    });
-
-    statCards.innerHTML = `
-      <div class="stat-card"><div class="num">${apps.length}</div><div class="lbl">Applications</div></div>
-      <div class="stat-card"><div class="num">${totalVideos}</div><div class="lbl">Videos</div></div>
-      <div class="stat-card"><div class="num">${filteredCount}</div><div class="lbl">Filtered</div></div>
-    `;
-  }
-  filterPanel.addEventListener('change', update);
-  update();
-}
-
-function jumpToValidation(app, video){
-  document.querySelector('nav.tabs button[data-tab="validations"]').click();
-  document.getElementById('rv-appFilter').value = app;
-  populateVideoFilter('rv-videoFilter', app);
-  document.getElementById('rv-videoFilter').value = video;
-  rvPlayerState.fromDashboard = true;
-  loadVideoForValidation(app, video, true);
-  renderValidations();
-}
-
-/* ============================= FILTER DROPDOWN HELPERS ============================= */
-function getApplications(){
-  return [...new Set(state.comments.filter(c=>!state.deletedIds.has(c.CommentID)).map(c=>c.Application))].filter(Boolean).sort();
-}
-function getVideosForApp(app){
-  return [...new Set(state.comments.filter(c=>!state.deletedIds.has(c.CommentID) && c.Application===app).map(c=>c.VideoName))].filter(Boolean).sort();
-}
-function populateAppFilter(selectId){
-  const sel = document.getElementById(selectId);
-  const current = sel.value;
-  sel.innerHTML = '<option value="">-- Select Application --</option>' +
-    getApplications().map(a=>`<option value="${a}">${a}</option>`).join('');
-  if(current) sel.value = current;
-}
-function populateVideoFilter(selectId, app){
-  const sel = document.getElementById(selectId);
-  sel.innerHTML = '<option value="">-- Select Video --</option>' +
-    (app ? getVideosForApp(app).map(v=>`<option value="${v}">${v}</option>`).join('') : '');
-}
-
-/* ============================= NEW REVIEW TAB ============================= */
-let nrPlayerState = {app:null, video:null, activeComments:[]};
-
-document.getElementById('nr-appFilter').addEventListener('change', (e)=>{
-  populateVideoFilter('nr-videoFilter', e.target.value);
-  document.getElementById('nr-detectedInfo').classList.remove('show');
-});
-document.getElementById('nr-videoFilter').addEventListener('change', (e)=>{
-  nrPlayerState.app = document.getElementById('nr-appFilter').value;
-  nrPlayerState.video = e.target.value;
-  renderNewReview();
-});
-
-document.getElementById('nr-browseBtn').addEventListener('click', ()=>{
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'video/*';
-  input.onchange = ()=>{
-    const file = input.files[0];
-    if(!file) return;
-    const parsed = parseAppAndVideo(file.name);
-    let app, vid;
-    if(parsed){ app = parsed.app; vid = parsed.vid; }
-    else{
-      app = prompt('Could not detect "video" in filename. Enter Application name:');
-      vid = prompt('Enter Video name:');
-      if(!app || !vid) return;
-    }
-    nrPlayerState.app = app; nrPlayerState.video = vid;
-    const url = URL.createObjectURL(file);
-    document.getElementById('nr-video').src = url;
-
-    document.getElementById('nr-detectedApp').textContent = app;
-    document.getElementById('nr-detectedVideo').textContent = vid;
-    document.getElementById('nr-detectedInfo').classList.add('show');
-
-    populateAppFilter('nr-appFilter');
-    document.getElementById('nr-appFilter').value = app;
-    populateVideoFilter('nr-videoFilter', app);
-    document.getElementById('nr-videoFilter').value = vid;
-    renderNewReview();
-  };
-  input.click();
-});
-
-function renderNewReview(){
-  populateAppFilter('nr-appFilter');
-  document.getElementById('nr-quickActionBtn').textContent = state.role === 'Reviewer' ? 'Approve Fix' : 'Mark Fixed by NIIT';
-
-  if(state.role === 'Developer'){
-    document.getElementById('nr-devNote').classList.remove('hidden');
-    document.getElementById('nr-addCommentCard').classList.add('hidden');
-  } else {
-    document.getElementById('nr-devNote').classList.add('hidden');
-    document.getElementById('nr-addCommentCard').classList.remove('hidden');
-  }
-
-  const lockBanner = document.getElementById('nr-lockBanner');
-  const lock = isLockedByOtherRole(nrPlayerState.app, nrPlayerState.video);
-  if(lock){
-    lockBanner.classList.remove('hidden');
-    lockBanner.innerHTML = `🔒 This video is currently locked by <strong>${lock.LockedBy}</strong> (${lock.LockedRole}). Editing is disabled here until they click Review Complete.`;
-    ['nr-commentText','nr-startRec','nr-addCommentBtn','nr-autoScanBtn','nr-quickActionBtn'].forEach(id=> document.getElementById(id).disabled = true);
-  } else {
-    lockBanner.classList.add('hidden');
-    document.getElementById('nr-commentText').disabled = false;
-    document.getElementById('nr-startRec').disabled = false;
-    document.getElementById('nr-addCommentBtn').disabled = false;
-    document.getElementById('nr-autoScanBtn').disabled = false;
-    document.getElementById('nr-quickActionBtn').disabled = false;
-  }
-
-  renderNewReviewComments();
-}
-
-function renderNewReviewComments(){
-  const tbody = document.querySelector('#nr-recentTable tbody');
-  tbody.innerHTML = '';
-  if(!nrPlayerState.app || !nrPlayerState.video){ nrPlayerState.activeComments = []; return; }
-  const comments = state.comments.filter(c=> !state.deletedIds.has(c.CommentID) &&
-    c.Application===nrPlayerState.app && c.VideoName===nrPlayerState.video)
-    .sort((a,b)=> a.Timestamp - b.Timestamp);
-  nrPlayerState.activeComments = comments;
-  if(comments.length === 0){
-    tbody.innerHTML = `<tr><td colspan="4" class="small-note" style="text-align:center; padding:20px;">No comments logged yet for this video.</td></tr>`;
+async function loadState() {
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) state = JSON.parse(saved);
     return;
   }
-  comments.slice(-8).reverse().forEach(c=>{
-    const tr = document.createElement('tr');
-    const shotCell = c.ScreenshotDataUrl
-      ? `<img class="thumb" src="${c.ScreenshotDataUrl}" onclick="openLightbox('${c.ScreenshotDataUrl.replace(/'/g,"\\'")}')">`
-      : '<span class="small-note">—</span>';
-    tr.innerHTML = `<td>${c.TimestampDisplay}</td><td>${shotCell}</td><td>${escapeHtml(c.CommentText)}</td><td>${c.CreatedBy}</td>`;
-    tbody.appendChild(tr);
-  });
+  if (!fileHandle) return;
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  state = text ? JSON.parse(text) : { videos: [], __lastModified: null };
+  state.__lastModified = file.lastModified;
 }
 
-function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-let nrCurrentIndex = -1;
-document.getElementById('nr-prevBtn').addEventListener('click', ()=> navigateIssue('nr', -1));
-document.getElementById('nr-nextBtn').addEventListener('click', ()=> navigateIssue('nr', 1));
-
-function navigateIssue(prefix, dir){
-  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
-  const video = document.getElementById(prefix+'-video');
-  const comments = stateObj.activeComments;
-  if(!comments || comments.length === 0) return;
-  let idx = prefix === 'nr' ? nrCurrentIndex : rvCurrentIndex;
-  idx = idx + dir;
-  if(idx < 0) idx = comments.length - 1;
-  if(idx >= comments.length) idx = 0;
-  if(prefix === 'nr') nrCurrentIndex = idx; else rvCurrentIndex = idx;
-  const c = comments[idx];
-  video.currentTime = c.Timestamp;
-  showCurrentComment(prefix, c);
-}
-
-function showCurrentComment(prefix, c){
-  const div = document.getElementById(prefix+'-currentComment');
-  div.innerHTML = `<strong>${c.TimestampDisplay}</strong> — ${escapeHtml(c.CommentText)}
-    <br><span class="small-note">Input: ${c.InputType} | Fixed: ${c.FixedByNIIT||'No'} | Approved: ${c.ApprovedByReviewer||'No'}</span>`;
-  if(prefix==='nr') state.currentCommentIdNR = c.CommentID;
-  else state.currentCommentIdRV = c.CommentID;
-}
-
-document.getElementById('nr-quickActionBtn').addEventListener('click', ()=>{
-  const id = state.currentCommentIdNR;
-  if(!id){ alert('Navigate to a comment first using Prev/Next.'); return; }
-  const row = state.comments.find(c=>c.CommentID === id);
-  if(!row) return;
-  if(isLockedByOtherRole(row.Application, row.VideoName)){ alert('This video is locked by the other role right now.'); return; }
-  if(state.role === 'Reviewer'){
-    row.ApprovedByReviewer = 'Yes';
-    touchComment(row);
-    tryAcquireLockForAction(row.Application, row.VideoName);
-    logActivity('Approved', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} approved`);
-  } else {
-    row.FixedByNIIT = 'Yes';
-    touchComment(row);
-    tryAcquireLockForAction(row.Application, row.VideoName);
-    logActivity('Fixed by NIIT', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} marked fixed`);
-  }
-  if(state.usingFSApi) writeCycle();
-  renderAll();
-});
-
-/* ============================= SCREENSHOT CAPTURE ============================= */
-function captureScreenshot(videoEl){
-  if(!videoEl || videoEl.readyState < 2) return '';
-  let width = 160, quality = 0.6;
-  let dataUrl = '';
-  for(let attempt=0; attempt<8; attempt++){
-    const canvas = document.createElement('canvas');
-    const scale = width / videoEl.videoWidth;
-    canvas.width = width;
-    canvas.height = Math.round(videoEl.videoHeight * scale) || 90;
-    const ctx = canvas.getContext('2d');
-    try{ ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); }catch(e){ return ''; }
-    dataUrl = canvas.toDataURL('image/jpeg', quality);
-    if(dataUrl.length < 30000) return dataUrl;
-    width = Math.round(width * 0.8);
-    quality = Math.max(0.3, quality - 0.1);
-  }
-  console.warn('Could not compress screenshot below limit; saving without image.');
-  return '';
-}
-
-/* ============================= ADD COMMENT (shared logic) ============================= */
-let pendingScreenshot = {nr:'', rv:''};
-let pendingTimestamp = {nr:null, rv:null};
-
-function setupCommentCardBehavior(prefix){
-  const textarea = document.getElementById(prefix+'-commentText');
-  const videoEl = document.getElementById(prefix+'-video');
-  textarea.addEventListener('focus', ()=>{
-    if(state.role !== 'Reviewer') return;
-    if(!videoEl.paused) videoEl.pause();
-    pendingTimestamp[prefix] = videoEl.currentTime || 0;
-    pendingScreenshot[prefix] = captureScreenshot(videoEl);
-  });
-
-  document.getElementById(prefix+'-addCommentBtn').addEventListener('click', ()=>{
-    const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
-    if(!stateObj.app || !stateObj.video){ alert('Please select a video first.'); return; }
-    if(isLockedByOtherRole(stateObj.app, stateObj.video)){ alert('This video is locked by the other role right now. Please try again shortly.'); return; }
-    const text = textarea.value.trim();
-    if(!text){ alert('Comment text cannot be empty.'); return; }
-    if(pendingTimestamp[prefix] === null){
-      pendingTimestamp[prefix] = videoEl.currentTime || 0;
-      pendingScreenshot[prefix] = captureScreenshot(videoEl);
-    }
-    const row = {
-      CommentID: uid(), Application: stateObj.app, VideoName: stateObj.video,
-      Timestamp: pendingTimestamp[prefix], TimestampDisplay: secondsToDisplay(pendingTimestamp[prefix]),
-      Frame: '', CommentText: text, InputType: recordingState[prefix].wasUsed ? 'Voice' : 'Text',
-      CreatedBy: state.userName, CreatedAt: new Date().toISOString(),
-      FixedByNIIT: 'No', ApprovedByReviewer: 'No', AutoDetected: 'No', FollowUpNotes: '',
-      ScreenshotDataUrl: pendingScreenshot[prefix] || '',
-    };
-    touchComment(row);
-    state.comments.push(row);
-    tryAcquireLockForAction(stateObj.app, stateObj.video);
-    logActivity('Comment Added', stateObj.app, stateObj.video, `"${text.slice(0,60)}${text.length>60?'…':''}" at ${row.TimestampDisplay}`);
-    textarea.value = '';
-    pendingTimestamp[prefix] = null; pendingScreenshot[prefix] = '';
-    recordingState[prefix].wasUsed = false;
-    if(state.usingFSApi) writeCycle();
-    renderAll();
-  });
-}
-setupCommentCardBehavior('nr');
-setupCommentCardBehavior('rv');
-
-/* ============================= VOICE RECORDING ============================= */
-let recordingState = {
-  nr: {active:false, wasUsed:false, hardTimer:null, recognition:null, restartTimer:null},
-  rv: {active:false, wasUsed:false, hardTimer:null, recognition:null, restartTimer:null}
-};
-let recCountdownInterval = null;
-
-function startRecording(prefix){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ alert('Speech recognition not supported in this browser.'); return; }
-  const textarea = document.getElementById(prefix+'-commentText');
-  const videoEl = document.getElementById(prefix+'-video');
-  if(!videoEl.paused) videoEl.pause();
-  pendingTimestamp[prefix] = videoEl.currentTime || 0;
-  pendingScreenshot[prefix] = captureScreenshot(videoEl);
-
-  const rs = recordingState[prefix];
-  rs.active = true; rs.wasUsed = true;
-  document.getElementById(prefix+'-startRec').disabled = true;
-  document.getElementById(prefix+'-stopRec').disabled = false;
-
-  const startTime = Date.now();
-  document.getElementById('recordingBanner').style.display = 'flex';
-  recCountdownInterval = setInterval(()=>{
-    const remaining = Math.max(0, 120 - Math.floor((Date.now()-startTime)/1000));
-    const m = Math.floor(remaining/60), s = remaining%60;
-    document.getElementById('recCountdown').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if(remaining <= 0) stopRecording(prefix);
-  }, 500);
-
-  rs.hardTimer = setTimeout(()=> stopRecording(prefix), 120000);
-
-  function createAndStart(){
-    if(!rs.active) return;
-    const recog = new SR();
-    recog.continuous = true; recog.interimResults = true; recog.lang = 'en-US';
-    recog.onresult = (e)=>{
-      let transcript = '';
-      for(let i=0; i<e.results.length; i++) transcript += e.results[i][0].transcript;
-      textarea.value = transcript;
-    };
-    recog.onerror = (e)=> console.warn('Speech recognition error', e);
-    recog.onend = ()=>{ if(rs.active) rs.restartTimer = setTimeout(createAndStart, 250); };
-    rs.recognition = recog;
-    try{ recog.start(); }catch(e){ console.warn(e); }
-  }
-  createAndStart();
-}
-
-function stopRecording(prefix){
-  const rs = recordingState[prefix];
-  rs.active = false;
-  if(rs.recognition){ try{ rs.recognition.stop(); }catch(e){} }
-  clearTimeout(rs.hardTimer); clearTimeout(rs.restartTimer);
-  document.getElementById(prefix+'-startRec').disabled = false;
-  document.getElementById(prefix+'-stopRec').disabled = true;
-  document.getElementById('recordingBanner').style.display = 'none';
-  if(recCountdownInterval){ clearInterval(recCountdownInterval); recCountdownInterval = null; }
-}
-
-document.getElementById('nr-startRec').onclick = ()=> startRecording('nr');
-document.getElementById('nr-stopRec').onclick = ()=> stopRecording('nr');
-document.getElementById('rv-startRec').onclick = ()=> startRecording('rv');
-document.getElementById('rv-stopRec').onclick = ()=> stopRecording('rv');
-document.getElementById('stopRecFromBanner').onclick = ()=>{
-  if(recordingState.nr.active) stopRecording('nr');
-  if(recordingState.rv.active) stopRecording('rv');
-};
-
-/* ============================= AUTO-SCAN FOR URLS ============================= */
-async function runAutoScan(prefix){
-  if(state.role !== 'Reviewer'){ alert('Only Reviewers can run Auto-Scan.'); return; }
-  const videoEl = document.getElementById(prefix+'-video');
-  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
-  if(!stateObj.app || !stateObj.video || !videoEl.src){ alert('Please load a video first.'); return; }
-  if(isLockedByOtherRole(stateObj.app, stateObj.video)){ alert('This video is locked by the other role right now.'); return; }
-  videoEl.pause();
-  const duration = videoEl.duration || 0;
-  if(!duration){ alert('Video duration unknown.'); return; }
-  const steps = 40;
-  const resultsDiv = document.getElementById(prefix+'-scanResults');
-  resultsDiv.innerHTML = '<div class="small-note">🔍 Scanning... this may take a while.</div>';
-
-  const observations = [];
-  const corners = [{x:0,y:0},{x:0.7,y:0},{x:0,y:0.8},{x:0.7,y:0.8}];
-
-  for(let i=0; i<steps; i++){
-    const t = (duration / steps) * i;
-    await seekVideo(videoEl, t);
-    for(const corner of corners){
-      const canvas = document.createElement('canvas');
-      const cw = videoEl.videoWidth * 0.3, ch = videoEl.videoHeight * 0.2;
-      canvas.width = cw; canvas.height = ch;
-      const ctx = canvas.getContext('2d');
-      try{ ctx.drawImage(videoEl, corner.x*videoEl.videoWidth, corner.y*videoEl.videoHeight, cw, ch, 0, 0, cw, ch); }catch(e){ continue; }
-      const dataUrl = canvas.toDataURL('image/png');
-      try{
-        const { data: { text } } = await Tesseract.recognize(dataUrl, 'eng');
-        const match = text.match(/(https?:\/\/[^\s]+)|(www\.[^\s]+)/i);
-        if(match) observations.push({timestamp:t, display:secondsToDisplay(t), text:match[0], screenshot: captureScreenshot(videoEl)});
-      }catch(e){ console.warn('OCR failed', e); }
-    }
-  }
-
-  resultsDiv.innerHTML = '';
-  if(observations.length === 0){ resultsDiv.innerHTML = '<div class="small-note">No URL-like text detected.</div>'; return; }
-  observations.forEach(obs=>{
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<strong>${obs.display}</strong><br>
-      ${obs.screenshot?`<img class="thumb" src="${obs.screenshot}">`:''}
-      <p>Detected: ${escapeHtml(obs.text)}</p>`;
-    const acceptBtn = document.createElement('button'); acceptBtn.className='btn sm'; acceptBtn.textContent='Accept';
-    const rejectBtn = document.createElement('button'); rejectBtn.className='btn secondary sm'; rejectBtn.textContent='Reject';
-    acceptBtn.onclick = ()=>{
-      const row = {
-        CommentID: uid(), Application: stateObj.app, VideoName: stateObj.video,
-        Timestamp: obs.timestamp, TimestampDisplay: obs.display, Frame:'',
-        CommentText: `Possible URL/link detected: ${obs.text}`,
-        InputType:'Auto', CreatedBy: state.userName, CreatedAt: new Date().toISOString(),
-        FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'',
-        ScreenshotDataUrl: obs.screenshot || ''
-      };
-      touchComment(row); state.comments.push(row);
-      tryAcquireLockForAction(stateObj.app, stateObj.video);
-      logActivity('Comment Added', stateObj.app, stateObj.video, `Auto-detected URL at ${obs.display}`);
-      card.remove();
-      if(state.usingFSApi) writeCycle();
-      renderAll();
-    };
-    rejectBtn.onclick = ()=> card.remove();
-    card.appendChild(acceptBtn); card.appendChild(rejectBtn);
-    resultsDiv.appendChild(card);
-  });
-}
-
-function seekVideo(videoEl, t){
-  return new Promise(resolve=>{
-    function onSeeked(){ videoEl.removeEventListener('seeked', onSeeked); resolve(); }
-    videoEl.addEventListener('seeked', onSeeked);
-    videoEl.currentTime = t;
-    setTimeout(resolve, 500);
-  });
-}
-
-document.getElementById('nr-autoScanBtn').onclick = ()=> runAutoScan('nr');
-document.getElementById('rv-autoScanBtn').onclick = ()=> runAutoScan('rv');
-
-/* ============================= REVIEW VALIDATIONS TAB ============================= */
-let rvPlayerState = {app:null, video:null, activeComments:[], fromDashboard:false};
-let rvCurrentIndex = -1;
-
-function resetValidationFilters(){
-  if(rvPlayerState.fromDashboard){ rvPlayerState.fromDashboard = false; return; }
-  document.getElementById('rv-appFilter').value = '';
-  document.getElementById('rv-videoFilter').innerHTML = '<option value="">-- Select Video --</option>';
-  document.getElementById('rv-statusFilter').value = '';
-  rvPlayerState.app = null; rvPlayerState.video = null;
-}
-
-document.getElementById('rv-appFilter').addEventListener('change', (e)=>{
-  populateVideoFilter('rv-videoFilter', e.target.value);
-  rvPlayerState.app = e.target.value; rvPlayerState.video = null;
-  renderValidations();
-});
-document.getElementById('rv-videoFilter').addEventListener('change', (e)=>{
-  rvPlayerState.app = document.getElementById('rv-appFilter').value;
-  rvPlayerState.video = e.target.value;
-  if(rvPlayerState.app && rvPlayerState.video){
-    loadVideoForValidation(rvPlayerState.app, rvPlayerState.video, false);
-  }
-  renderValidations();
-});
-document.getElementById('rv-statusFilter').addEventListener('change', renderValidations);
-
-document.getElementById('rv-browseBtn').addEventListener('click', ()=>{
-  if(!rvPlayerState.app || !rvPlayerState.video){ alert('Please select an Application and Video from the dropdowns first.'); return; }
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'video/*';
-  input.onchange = ()=>{
-    const file = input.files[0]; if(!file) return;
-    document.getElementById('rv-video').src = URL.createObjectURL(file);
-  };
-  input.click();
-});
-
-function loadVideoForValidation(app, video, fromDashboard){
-  rvPlayerState.app = app; rvPlayerState.video = video; rvPlayerState.fromDashboard = fromDashboard;
-}
-
-document.getElementById('rv-prevBtn').addEventListener('click', ()=> navigateIssue('rv', -1));
-document.getElementById('rv-nextBtn').addEventListener('click', ()=> navigateIssue('rv', 1));
-
-document.getElementById('rv-quickActionBtn').addEventListener('click', ()=>{
-  const id = state.currentCommentIdRV;
-  if(!id){ alert('Navigate to a comment first using Prev/Next or a timestamp link.'); return; }
-  const row = state.comments.find(c=>c.CommentID === id);
-  if(!row) return;
-  if(isLockedByOtherRole(row.Application, row.VideoName)){ alert('This video is locked by the other role right now.'); return; }
-  if(state.role === 'Reviewer'){
-    row.ApprovedByReviewer = 'Yes';
-    touchComment(row);
-    tryAcquireLockForAction(row.Application, row.VideoName);
-    logActivity('Approved', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} approved`);
-  } else {
-    row.FixedByNIIT = 'Yes';
-    touchComment(row);
-    tryAcquireLockForAction(row.Application, row.VideoName);
-    logActivity('Fixed by NIIT', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} marked fixed`);
-  }
-  if(state.usingFSApi) writeCycle();
-  renderAll();
-});
-
-function renderActivityLog(){
-  const container = document.getElementById('rv-activityLog');
-  if(!container) return;
-  if(state.activityLog.length === 0){
-    container.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="icon">🕑</div>No activity yet.</div>`;
+async function saveState() {
+  if (useLocalStorageFallback) {
+    state.__lastModified = Date.now();
+    localStorage.setItem('vrt_data', JSON.stringify(state));
     return;
   }
-  container.innerHTML = state.activityLog.slice(0,20).map(a=>`
-    <div class="activity-item">
-      <div class="activity-icon">${activityIcon(a.Action)}</div>
-      <div class="activity-text">
-        <div><strong>${escapeHtml(a.User)}</strong> (${a.Role}) — ${escapeHtml(a.Action)}${a.Application?` on <strong>${escapeHtml(a.Application)} / ${escapeHtml(a.VideoName)}</strong>`:''}</div>
-        <div class="small-note">${escapeHtml(a.Details||'')}</div>
-        <div class="activity-time">${timeAgo(a.TimestampEpoch)} · ${new Date(a.TimestampEpoch).toLocaleString()}</div>
+  if (!fileHandle) return;
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(state, null, 2));
+  await writable.close();
+  const file = await fileHandle.getFile();
+  state.__lastModified = file.lastModified;
+}
+
+async function heartbeat() {
+  let changed = false;
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.__lastModified !== state.__lastModified) { state = parsed; changed = true; }
+    }
+  } else if (fileHandle) {
+    try {
+      const file = await fileHandle.getFile();
+      if (file.lastModified !== state.__lastModified) { await loadState(); changed = true; }
+    } catch (e) { /* ignore */ }
+  }
+  if (!changed) return;
+  toast('Synced latest changes from file');
+  /* IMPORTANT: avoid full shell re-render on review/fix screens so the loaded video is not disturbed */
+  if (screen === 'review') renderCommentsPanel();
+  else if (screen === 'fix') renderFixPanel();
+  else render();
+}
+setInterval(heartbeat, 4000);
+
+/* ============== UTIL ============== */
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function findVideo(id) { return state.videos.find(v => v.id === id); }
+function render() { screens[screen](); }
+function fmtTime(t) {
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+/* ============== SCREENS ============== */
+const screens = {};
+
+screens.init = function () {
+  document.getElementById('app').innerHTML = `
+  <div class="center-card">
+    <h2>Video Review Tool</h2>
+    <p class="small">Select your role, enter your name, and open your shared data file.</p>
+    <div class="flexgap" style="margin-bottom:16px">
+      <div class="role-btn ${currentUser.role==='reviewer'?'active':''}" data-action="pickRole" data-id="reviewer">Reviewer</div>
+      <div class="role-btn ${currentUser.role==='developer'?'active':''}" data-action="pickRole" data-id="developer">Developer</div>
+    </div>
+    <label>Your Name <span style="color:#dc2626">*</span></label>
+    <input type="text" id="userName" value="${currentUser.name}" placeholder="e.g. Priya" required>
+    <div style="margin:16px 0">
+      <button class="secondary" style="width:100%" data-action="openDataFile">Open Existing Data File</button>
+      <p class="small" style="margin-top:6px">First time setup? <a href="#" data-action="createDataFile">Create a new data file</a> instead.</p>
+    </div>
+    <p class="small">${fileHandle ? 'Connected: ' + fileHandle.name : (useLocalStorageFallback ? 'Using local-storage fallback' : 'No file connected yet')}</p>
+    <button class="success" style="width:100%" data-action="enterApp" ${(!currentUser.role || !currentUser.name.trim() || (!fileHandle && !useLocalStorageFallback)) ? 'disabled' : ''}>Continue</button>
+  </div>`;
+  document.getElementById('userName').addEventListener('input', (e) => {
+    currentUser.name = e.target.value;
+    const btn = document.querySelector('[data-action="enterApp"]');
+    if (btn) btn.disabled = !currentUser.role || !e.target.value.trim() || (!fileHandle && !useLocalStorageFallback);
+  });
+};
+
+screens.dashboard = function () {
+  const rows = state.videos.map(v => {
+    const act = getAction(v);
+    return `<tr>
+      <td>${v.name}</td>
+      <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span></td>
+      <td>${v.round}</td>
+      <td>${v.lock && v.lock.role ? `<span class="lockmsg">🔒 ${v.lock.role} (${v.lock.by})</span>` : '—'}</td>
+      <td>${v.comments.length}</td>
+      <td>${v.addedBy} / ${v.addedAt}</td>
+      <td>${act.disabled ? `<button disabled>${act.label}</button>` : `<button data-action="${act.action}" data-id="${v.id}">${act.label}</button>`}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${currentUser.name}</b> — <span class="badge" style="background:#111">${currentUser.role}</span></div>
+    <div class="flexgap">
+      <button class="secondary" data-action="openStatusDashboard">Status Overview</button>
+      <button class="secondary" data-action="exportCsv">Export CSV</button>
+      <button class="secondary" data-action="refreshNow">Refresh</button>
+      <button class="danger" data-action="logout">Switch User/Role</button>
+    </div>
+  </div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <div class="flexgap" style="justify-content:space-between;margin-bottom:12px">
+      <h2>Video Queue</h2>
+      ${currentUser.role === 'developer' ? `<button data-action="openAddVideo">+ Add New Video</button>` : ''}
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Status</th><th>Round</th><th>Lock</th><th>#Comments</th><th>Added By</th><th>Action</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan=7>No videos yet.</td></tr>'}</tbody>
+    </table>
+  </div>`;
+};
+
+/* ===== Status Overview with Filters ===== */
+screens.statusDashboard = function () {
+  const apps = [...new Set(state.videos.map(v => v.appName).filter(Boolean))];
+  const statuses = [...new Set(state.videos.map(v => v.status))];
+
+  let list = state.videos.slice();
+  if (statusFilters.app) list = list.filter(v => v.appName === statusFilters.app);
+  if (statusFilters.status) list = list.filter(v => v.status === statusFilters.status);
+  if (statusFilters.videoSearch) list = list.filter(v => v.name.toLowerCase().includes(statusFilters.videoSearch.toLowerCase()));
+
+  const rows = list.map(v => {
+    const rounds = {};
+    v.comments.forEach(c => {
+      if (!rounds[c.round]) rounds[c.round] = { logged: 0, fixed: 0 };
+      rounds[c.round].logged++;
+      if (c.fixStatus === 'approved') rounds[c.round].fixed++;
+    });
+    const roundSummary = Object.keys(rounds).sort((a,b)=>a-b)
+      .map(r => `R${r}: ${rounds[r].fixed}/${rounds[r].logged} fixed`).join('<br>') || 'No comments yet';
+    const duration = v.durationSec ? fmtTime(v.durationSec) : '—';
+    let withWhom;
+    if (v.status === 'signed_off') withWhom = 'Signed Off ✅';
+    else if (v.lock && v.lock.role) withWhom = `With ${v.lock.role} (${v.lock.by})`;
+    else if (v.status === 'pending_review') withWhom = 'With Reviewer (not started)';
+    else if (v.status === 'reviewed') withWhom = 'With Developer (not started)';
+    else if (v.status === 'fixed') withWhom = 'With Reviewer (not started)';
+    else withWhom = '—';
+    return `<tr>
+      <td>${v.appName || '—'}</td>
+      <td>${v.name}</td>
+      <td>${duration}</td>
+      <td>${roundSummary}</td>
+      <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span><br><span class="small">${withWhom}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>Status Overview</b> — ${currentUser.name} (${currentUser.role})</div>
+    <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+  </div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <div class="filter-row">
+      <div>
+        <label class="small">Application</label>
+        <select id="filterApp">
+          <option value="">All</option>
+          ${apps.map(a => `<option value="${a}" ${statusFilters.app===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="small">Status</label>
+        <select id="filterStatus">
+          <option value="">All</option>
+          ${statuses.map(s => `<option value="${s}" ${statusFilters.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="small">Video Name Search</label>
+        <input type="text" id="filterVideo" value="${statusFilters.videoSearch}" placeholder="Search video name...">
+      </div>
+      <div style="flex:0 0 auto;align-self:flex-end">
+        <button class="secondary" data-action="clearStatusFilters">Clear Filters</button>
       </div>
     </div>
-  `).join('');
-}
+    <table>
+      <thead><tr><th>Application</th><th>Video</th><th>Duration</th><th>Issues Logged vs Fixed (by round)</th><th>Current Status</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan=5>No matching videos.</td></tr>'}</tbody>
+    </table>
+  </div>`;
 
-function renderValidations(){
-  populateAppFilter('rv-appFilter');
-  const app = document.getElementById('rv-appFilter').value;
-  const video = document.getElementById('rv-videoFilter').value;
-  const statusFilterVal = document.getElementById('rv-statusFilter').value;
-
-  document.getElementById('rv-quickActionBtn').textContent = state.role === 'Reviewer' ? 'Approve Fix' : 'Mark Fixed by NIIT';
-  document.getElementById('rv-reviewCompleteBtn').textContent = state.role === 'Developer'
-    ? '✔ Fix Completed – Stamp & Sync'
-    : '✔ Review Complete – Stamp & Sync';
-
-  const isDev = state.role === 'Developer';
-  if(isDev && (!app || !video)){
-    document.getElementById('rv-devPrompt').classList.remove('hidden');
-    document.getElementById('rv-workspace').classList.add('hidden');
-    renderActivityLog();
-    return;
-  } else {
-    document.getElementById('rv-devPrompt').classList.add('hidden');
-    document.getElementById('rv-workspace').classList.remove('hidden');
-    document.getElementById('rv-addCommentCard').classList.toggle('hidden', state.role !== 'Reviewer');
-  }
-
-  const lockBanner = document.getElementById('rv-lockBanner');
-  const lock = isLockedByOtherRole(app, video);
-  if(lock && app && video){
-    lockBanner.classList.remove('hidden');
-    lockBanner.innerHTML = `🔒 This video is currently locked by <strong>${lock.LockedBy}</strong> (${lock.LockedRole}). Editing is disabled here until they click Review Complete.`;
-  } else {
-    lockBanner.classList.add('hidden');
-  }
-  const rvLockedForMe = !!lock;
-  ['rv-commentText','rv-startRec','rv-addCommentBtn','rv-autoScanBtn','rv-quickActionBtn'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.disabled = rvLockedForMe;
-  });
-
-  rvPlayerState.activeComments = state.comments.filter(c=>!state.deletedIds.has(c.CommentID) &&
-    (!app || c.Application===app) && (!video || c.VideoName===video))
-    .sort((a,b)=>a.Timestamp-b.Timestamp);
-
-  const appMap = getVideoGroups();
-  const built = {};
-  Object.keys(appMap).forEach(a=>{
-    if(app && a !== app) return;
-    Object.keys(appMap[a]).forEach(v=>{
-      if(video && v !== video) return;
-      const comments = appMap[a][v];
-      const status = computeStatus(comments);
-      if(status === 'Signed Off') return;
-      if(statusFilterVal && status !== statusFilterVal) return;
-      built[a] = built[a] || {};
-      built[a][v] = comments;
-    });
-  });
-
-  renderGroupedList(document.getElementById('rv-activeGroups'), 'rvActive', built, {
-    showVideoSubgroups: true,
-    rowRenderer: (a, v, comments)=> renderCommentTable(a, v, comments)
-  });
-
-  const signedTbody = document.getElementById('rv-signedOffTable');
-  signedTbody.innerHTML = '';
-  let anySignedOff = false;
-  Object.keys(appMap).forEach(a=>{
-    Object.keys(appMap[a]).forEach(v=>{
-      const comments = appMap[a][v];
-      const status = computeStatus(comments);
-      if(status !== 'Signed Off') return;
-      anySignedOff = true;
-      const approvedCount = comments.filter(c=>String(c.ApprovedByReviewer).toLowerCase()==='yes').length;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${a}</td><td>${v}</td><td>${comments.length}</td><td>${approvedCount}</td>`;
-      const tdBtns = document.createElement('td');
-      const viewBtn = document.createElement('button'); viewBtn.className='btn secondary sm'; viewBtn.textContent='View';
-      viewBtn.onclick = ()=>{ jumpToValidation(a,v); };
-      tdBtns.appendChild(viewBtn);
-      if(state.role === 'Reviewer'){
-        const rbBtn = document.createElement('button'); rbBtn.className='btn danger sm'; rbBtn.textContent='Rollback';
-        rbBtn.onclick = ()=>{
-          if(!confirm('Rollback this signed-off video? All approvals will be reset.')) return;
-          comments.forEach(c=>{ c.ApprovedByReviewer = 'No'; touchComment(c); });
-          tryAcquireLockForAction(a, v);
-          logActivity('Rollback', a, v, `${state.userName} rolled back sign-off`);
-          if(state.usingFSApi) writeCycle();
-          renderAll();
-        };
-        tdBtns.appendChild(rbBtn);
-      }
-      tr.appendChild(tdBtns);
-      signedTbody.appendChild(tr);
-    });
-  });
-  if(!anySignedOff){
-    signedTbody.innerHTML = `<tr><td colspan="5" class="small-note" style="text-align:center; padding:16px;">No videos signed off yet.</td></tr>`;
-  }
-
-  renderActivityLog();
-
-  document.getElementById('rv-expandAll').onclick = ()=>{
-    document.querySelectorAll('#rv-activeGroups .group-header, #rv-activeGroups .video-group-header').forEach(h=>h.classList.add('expanded'));
-    document.querySelectorAll('#rv-activeGroups .group-body').forEach(b=>b.classList.add('open'));
-  };
-  document.getElementById('rv-collapseAll').onclick = ()=>{
-    document.querySelectorAll('#rv-activeGroups .group-header, #rv-activeGroups .video-group-header').forEach(h=>h.classList.remove('expanded'));
-    document.querySelectorAll('#rv-activeGroups .group-body').forEach(b=>b.classList.remove('open'));
-  };
-}
-
-function renderCommentTable(app, video, comments){
-  const videoLock = isLockedByOtherRole(app, video);
-  const table = document.createElement('table');
-  table.className = 'rv-comment-table';
-  table.innerHTML = `
-    <colgroup>
-      <col style="width:9%">
-      <col style="width:8%">
-      <col style="width:25%">
-      <col style="width:7%">
-      <col style="width:10%">
-      <col style="width:10%">
-      <col style="width:19%">
-      <col style="width:12%">
-    </colgroup>
-    <thead><tr><th>Time</th><th>Shot</th><th>Comment</th><th>Input</th>
-    <th>Fixed</th><th>Approved</th><th>Follow-up</th><th>Actions</th></tr></thead>`;
-  const tbody = document.createElement('tbody');
-  comments.sort((a,b)=>a.Timestamp-b.Timestamp).forEach(c=>{
-    const tr = document.createElement('tr');
-
-    const tdTime = document.createElement('td');
-    const timeLink = document.createElement('a');
-    timeLink.href = '#'; timeLink.textContent = c.TimestampDisplay;
-    timeLink.onclick = (e)=>{
-      e.preventDefault();
-      const videoEl = document.getElementById('rv-video');
-      videoEl.currentTime = c.Timestamp;
-      showCurrentComment('rv', c);
-      rvCurrentIndex = rvPlayerState.activeComments.findIndex(x=>x.CommentID===c.CommentID);
-    };
-    tdTime.appendChild(timeLink); tr.appendChild(tdTime);
-
-    const tdShot = document.createElement('td');
-    if(c.ScreenshotDataUrl){
-      const img = document.createElement('img');
-      img.className = 'thumb'; img.src = c.ScreenshotDataUrl;
-      img.onclick = ()=> openLightbox(c.ScreenshotDataUrl);
-      tdShot.appendChild(img);
-    }
-    tr.appendChild(tdShot);
-
-    const tdText = document.createElement('td');
-    tdText.innerHTML = `${escapeHtml(c.CommentText)}<br><span class="small-note">Last updated by ${c._LastModifiedBy||c.CreatedBy} · ${c._LastModifiedAt? timeAgo(new Date(c._LastModifiedAt).getTime()) : ''} (${c._LastModifiedAt||c.CreatedAt})</span>`;
-    tr.appendChild(tdText);
-
-    const tdInput = document.createElement('td'); tdInput.textContent = c.InputType; tr.appendChild(tdInput);
-
-    const tdFixed = document.createElement('td');
-    const fixedSel = document.createElement('select');
-    fixedSel.innerHTML = `<option value="No">No</option><option value="Yes">Yes</option>`;
-    fixedSel.value = c.FixedByNIIT || 'No';
-    fixedSel.disabled = videoLock;
-    fixedSel.onchange = ()=>{
-      if(state.role !== 'Developer'){ alert('Only Developers (NIIT) can change "Fixed by NIIT".'); fixedSel.value = c.FixedByNIIT || 'No'; return; }
-      if(isLockedByOtherRole(app, video)){ alert('This video is locked by the other role right now.'); fixedSel.value = c.FixedByNIIT || 'No'; return; }
-      c.FixedByNIIT = fixedSel.value; touchComment(c);
-      tryAcquireLockForAction(app, video);
-      logActivity('Fixed by NIIT', app, video, `Comment at ${c.TimestampDisplay} set to "${fixedSel.value}"`);
-      if(state.usingFSApi) writeCycle();
-      renderAll();
-    };
-    tdFixed.appendChild(fixedSel); tr.appendChild(tdFixed);
-
-    const tdApproved = document.createElement('td');
-    const apprSel = document.createElement('select');
-    apprSel.innerHTML = `<option value="No">No</option><option value="Yes">Yes</option>`;
-    apprSel.value = c.ApprovedByReviewer || 'No';
-    apprSel.disabled = videoLock;
-    apprSel.onchange = ()=>{
-      if(state.role !== 'Reviewer'){ alert('Only the Reviewer can change "Approved by Reviewer".'); apprSel.value = c.ApprovedByReviewer || 'No'; return; }
-      if(isLockedByOtherRole(app, video)){ alert('This video is locked by the other role right now.'); apprSel.value = c.ApprovedByReviewer || 'No'; return; }
-      c.ApprovedByReviewer = apprSel.value; touchComment(c);
-      tryAcquireLockForAction(app, video);
-      logActivity('Approved', app, video, `Comment at ${c.TimestampDisplay} set to "${apprSel.value}"`);
-      if(state.usingFSApi) writeCycle();
-      renderAll();
-    };
-    tdApproved.appendChild(apprSel); tr.appendChild(tdApproved);
-
-    const tdFollowUp = document.createElement('td');
-    const fuInput = document.createElement('input');
-    fuInput.type = 'text'; fuInput.value = c.FollowUpNotes || '';
-    fuInput.disabled = videoLock;
-    fuInput.addEventListener('focus', ()=>{ state.isTypingNow = true; });
-    fuInput.addEventListener('blur', ()=>{
-      state.isTypingNow = false;
-      if(fuInput.value !== c.FollowUpNotes){
-        c.FollowUpNotes = fuInput.value; touchComment(c);
-        logActivity('Follow-up Note', app, video, `Note updated on comment at ${c.TimestampDisplay}`);
-        if(state.usingFSApi) writeCycle();
-      }
-    });
-    tdFollowUp.appendChild(fuInput); tr.appendChild(tdFollowUp);
-
-    const tdActions = document.createElement('td');
-    if(state.role === 'Reviewer'){
-      const editBtn = document.createElement('button'); editBtn.className='btn secondary sm'; editBtn.textContent='Edit'; editBtn.disabled = videoLock;
-      editBtn.onclick = ()=>{
-        if(isLockedByOtherRole(app,video)){ alert('This video is locked by the other role right now.'); return; }
-        const newText = prompt('Edit comment text:', c.CommentText);
-        if(newText !== null){
-          c.CommentText = newText; touchComment(c);
-          tryAcquireLockForAction(app, video);
-          logActivity('Edited', app, video, `Comment at ${c.TimestampDisplay} text updated`);
-          if(state.usingFSApi) writeCycle();
-          renderAll();
-        }
-      };
-      const delBtn = document.createElement('button'); delBtn.className='btn danger sm'; delBtn.textContent='Delete'; delBtn.disabled = videoLock;
-      delBtn.onclick = ()=>{
-        if(isLockedByOtherRole(app,video)){ alert('This video is locked by the other role right now.'); return; }
-        if(confirm('Delete this comment?')){
-          state.deletedIds.add(c.CommentID);
-          state.comments = state.comments.filter(x=>x.CommentID !== c.CommentID);
-          tryAcquireLockForAction(app, video);
-          logActivity('Deleted', app, video, `Comment at ${c.TimestampDisplay} deleted`);
-          if(state.usingFSApi) writeCycle();
-          renderAll();
-        }
-      };
-      tdActions.appendChild(editBtn); tdActions.appendChild(delBtn);
-    }
-    tr.appendChild(tdActions);
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  return table;
-}
-
-function openLightbox(src){
-  const overlay = document.createElement('div');
-  overlay.className = 'lightbox';
-  overlay.innerHTML = `<img src="${src}">`;
-  overlay.onclick = ()=> overlay.remove();
-  document.body.appendChild(overlay);
-}
-
-/* ============================= REVIEW COMPLETE ============================= */
-function stampReviewComplete(prefix){
-  if(state.role !== 'Reviewer' && state.role !== 'Developer'){ return; }
-
-  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
-  const app = stateObj.app, video = stateObj.video;
-
-  if(!app || !video){
-    alert('Please select/load a video first.');
-    return;
-  }
-
-  const actionLabel = (prefix === 'rv' && state.role === 'Developer') ? 'fix' : 'review';
-  if(!confirm(`Mark ${actionLabel} complete and sync now? This will release your lock on this video.`)) return;
-
-  state.config.ReviewCompletedAt = new Date().toISOString();
-  state.config.ReviewCompletedBy = state.userName;
-
-  releaseLock(app, video);
-  logActivity('Review Complete', app, video, `Stamped by ${state.userName} (${state.role}); lock released`);
-
-  if(recordingState.nr.active) stopRecording('nr');
-  if(recordingState.rv.active) stopRecording('rv');
-  if(state.usingFSApi) writeCycle();
-  renderAll();
-}
-document.getElementById('nr-reviewCompleteBtn').onclick = ()=> stampReviewComplete('nr');
-document.getElementById('rv-reviewCompleteBtn').onclick = ()=> stampReviewComplete('rv');
-
-/* ============================= LIVE SYNC ============================= */
-let readTimer = null, writeTimer = null;
-let nextReadIn = 2, nextWriteIn = 3;
-let syncMessageOverride = null, syncMessageTimeout = null;
-let writeInFlight = false;
-
-function isUserTyping(){
-  const active = document.activeElement;
-  return active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && active.type==='text'));
-}
-function updateSyncBannerText(){
-  if(syncMessageOverride) return;
-  document.getElementById('syncText').textContent = `Next read: ${nextReadIn}s / Next write: ${nextWriteIn}s`;
-}
-setInterval(()=>{
-  if(!state.usingFSApi) return;
-  nextReadIn = Math.max(0, nextReadIn - 1); nextWriteIn = Math.max(0, nextWriteIn - 1);
-  updateSyncBannerText();
-}, 1000);
-
-function scheduleReadCycle(){
-  readTimer = setTimeout(async ()=>{
-    if(isUserTyping()){ nextReadIn = 2; scheduleReadCycle(); return; }
-    await readCycle(); nextReadIn = 2; scheduleReadCycle();
-  }, 2000);
-}
-function scheduleWriteCycle(){
-  writeTimer = setTimeout(async ()=>{
-    if(isUserTyping()){ nextWriteIn = 3; scheduleWriteCycle(); return; }
-    await writeCycle(); nextWriteIn = 3; scheduleWriteCycle();
-  }, 3000);
-}
-
-function mergeDiskIntoState(wb){
-  let updates = 0;
-  const wsC = wb.Sheets['Comments'];
-  const diskRows = wsC ? XLSX.utils.sheet_to_json(wsC, {defval:''}) : [];
-  const byId = new Map(state.comments.map(c=>[c.CommentID, c]));
-  diskRows.forEach(dr=>{
-    dr.Timestamp = parseFlexibleTimestamp(dr.Timestamp);
-    dr._LastModified = Number(dr._LastModified)||0;
-    if(state.deletedIds.has(dr.CommentID)) return;
-    const existing = byId.get(dr.CommentID);
-    if(!existing){ state.comments.push(dr); byId.set(dr.CommentID, dr); updates++; }
-    else if(dr._LastModified > (existing._LastModified||0)){ Object.assign(existing, dr); updates++; }
-  });
-
-  const wsL = wb.Sheets['Locks'];
-  const diskLocks = (wsL ? XLSX.utils.sheet_to_json(wsL, {defval:''}) : []).map(l=>({...l, ExpiresAt:Number(l.ExpiresAt)||0}));
-  mergeLocks(diskLocks);
-
-  const wsA = wb.Sheets['Activity'];
-  const diskActivity = (wsA ? XLSX.utils.sheet_to_json(wsA, {defval:''}) : []).map(a=>({...a, TimestampEpoch:Number(a.TimestampEpoch)||0}));
-  mergeActivity(diskActivity);
-
-  return updates;
-}
-function mergeActivity(diskActivity){
-  const byId = new Map(state.activityLog.map(a=>[a.ActivityID, a]));
-  diskActivity.forEach(a=>{ if(!byId.has(a.ActivityID)) byId.set(a.ActivityID, a); });
-  state.activityLog = [...byId.values()].sort((a,b)=> b.TimestampEpoch - a.TimestampEpoch).slice(0,300);
-}
-
-async function readCycle(){
-  try{
-    const file = await state.fileHandle.getFile();
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    const updates = mergeDiskIntoState(wb);
-    renderAll();
-    showSyncMessage(updates > 0 ? `✅ Read successful — synced ${updates} update(s)` : '✅ Read successful — no changes');
-  }catch(e){
-    console.error('Read cycle failed', e);
-    showSyncMessage('❌ Read failed: ' + e.message, true);
-  }
-}
-
-async function writeCycle(){
-  if(writeInFlight) return;
-  writeInFlight = true;
-  try{
-    const perm = await state.fileHandle.queryPermission({mode:'readwrite'});
-    if(perm !== 'granted'){
-      document.getElementById('resumeSyncBanner').style.display = 'flex';
-      writeInFlight = false;
-      return;
-    }
-    document.getElementById('resumeSyncBanner').style.display = 'none';
-
-    try{
-      const file = await state.fileHandle.getFile();
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, {type:'array'});
-      mergeDiskIntoState(wb);
-    }catch(e){ console.warn('Pre-write merge read failed, proceeding with in-memory state only', e); }
-
-    renewAllMyLocks();
-
-    const wbOut = buildWorkbook(state.comments, state.config, state.locks, state.activityLog);
-    const arrBuf = XLSX.write(wbOut, {type:'array', bookType:'xlsx'});
-    const writable = await state.fileHandle.createWritable();
-    await writable.write(arrBuf);
-    await writable.close();
-    state.deletedIds.clear();
-    state.releasedLocks.clear();
-    showSyncMessage('✅ Write successful');
-    renderAll();
-  }catch(e){
-    console.error('Write cycle failed', e);
-    showSyncMessage('❌ Write failed: ' + e.message, true);
-  }
-  writeInFlight = false;
-}
-
-document.getElementById('resumeSyncBtn').onclick = async ()=>{
-  try{
-    await state.fileHandle.requestPermission({mode:'readwrite'});
-    document.getElementById('resumeSyncBanner').style.display = 'none';
-    writeCycle();
-  }catch(e){ console.error(e); }
+  document.getElementById('filterApp').addEventListener('change', (e) => { statusFilters.app = e.target.value; screens.statusDashboard(); });
+  document.getElementById('filterStatus').addEventListener('change', (e) => { statusFilters.status = e.target.value; screens.statusDashboard(); });
+  document.getElementById('filterVideo').addEventListener('input', (e) => { statusFilters.videoSearch = e.target.value; screens.statusDashboard(); });
 };
 
-function showSyncMessage(msg, isError){
-  syncMessageOverride = msg;
-  const el = document.getElementById('syncText');
-  el.textContent = msg; el.style.color = isError ? '#FCA5A5' : '';
-  clearTimeout(syncMessageTimeout);
-  syncMessageTimeout = setTimeout(()=>{ syncMessageOverride = null; el.style.color = ''; updateSyncBannerText(); }, 2500);
+function getAction(v) {
+  const role = currentUser.role;
+  const mine = v.lock && v.lock.by === currentUser.name && v.lock.role === role;
+  switch (v.status) {
+    case 'pending_review':
+      return role === 'reviewer' ? { label: 'Start Review', action: 'startReview' } : { label: 'Waiting for Reviewer', disabled: true };
+    case 'in_review':
+      if (role === 'reviewer' && mine) return { label: 'Continue Review', action: 'openReview' };
+      return { label: 'Locked by Reviewer', disabled: true };
+    case 'reviewed':
+      return role === 'developer' ? { label: 'Start Fix', action: 'startFix' } : { label: 'Waiting for Developer', disabled: true };
+    case 'in_fix':
+      if (role === 'developer' && mine) return { label: 'Continue Fix', action: 'openFix' };
+      return { label: 'Locked by Developer', disabled: true };
+    case 'fixed':
+      return role === 'reviewer' ? { label: `Start Validation R${v.round + 1}`, action: 'startValidation' } : { label: 'Waiting for Reviewer', disabled: true };
+    case 'in_validation':
+      if (role === 'reviewer' && mine) return { label: 'Continue Validation', action: 'openReview' };
+      return { label: 'Locked by Reviewer (validating)', disabled: true };
+    case 'signed_off':
+      return { label: role === 'reviewer' ? 'View / Rollback' : 'Signed Off (view only)', action: 'openSignedOff' };
+  }
 }
 
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && state.usingFSApi) readCycle(); });
-window.addEventListener('focus', ()=>{ if(state.usingFSApi) readCycle(); });
+/* =========================================================
+   REVIEW SCREEN — rebuilt as STATIC SHELL + DYNAMIC PANEL
+   The <video> element is created ONCE per screen-entry.
+   All comment actions update only #commentsPanel afterwards,
+   so the video position/src is never disturbed.
+   ========================================================= */
+screens.review = function () {
+  const v = findVideo(activeVideoId);
+  const validation = v.status === 'in_validation';
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${v.name}</b> — Round ${v.round} ${validation ? '(Validation)' : '(Review)'}</div>
+    <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+  </div>
+  <div class="layout">
+    <div class="video-col">
+      <div class="flexgap" style="margin-bottom:8px">
+        <button data-action="browseVideo">Browse Video File</button>
+        <button class="warn" data-action="autoScanUrls">Auto Review for URLs</button>
+        ${validation ? `<button class="success" data-action="markAllFixed">Mark All as Fixed/Approved</button>` : ''}
+        <button class="success" data-action="reviewComplete">Review Complete</button>
+      </div>
+      <video id="reviewVideo" controls></video>
+      <div id="scanProgress" class="small"></div>
+      <div id="obsArea"></div>
+    </div>
+    <div class="comments-col" id="commentsPanel"></div>
+  </div>`;
+  attachVideoHandlers();
+  renderCommentsPanel();
+};
 
-/* ============================= RENDER ALL ============================= */
-function renderAll(){
-  const activeTab = document.querySelector('nav.tabs button.active')?.dataset.tab;
-  if(activeTab === 'dashboard') renderDashboard();
-  if(activeTab === 'newreview') renderNewReview();
-  if(activeTab === 'validations') renderValidations();
-  populateAppFilter('nr-appFilter');
-  populateAppFilter('rv-appFilter');
+function renderCommentsPanel() {
+  const panel = document.getElementById('commentsPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  const validation = v.status === 'in_validation';
+  const roundComments = v.comments;
+
+  // preserve any text the user was mid-typing before this panel refresh
+  const existingTa = document.getElementById('commentText');
+  const preservedText = existingTa ? existingTa.value : '';
+  const micOn = !!recognition;
+
+  panel.innerHTML = `
+    <div class="entry-box">
+      <textarea id="commentText" rows="2" placeholder="Type a comment..." data-action-focus="pause">${preservedText}</textarea>
+      <button id="micBtn" data-action="toggleMic">${micOn ? '⏹' : '🎤'}</button>
+      <button class="success" data-action="submitComment">Add</button>
+    </div>
+    <h3>Comments (${roundComments.length}) ${validation ? `<button class="secondary" data-action="prevComment">◀ Prev</button><button class="secondary" data-action="nextComment">Next ▶</button>` : ''}</h3>
+    ${roundComments.map((c) => renderCommentCard(c, validation)).join('') || '<p class="small">No comments yet.</p>'}
+  `;
+
+  const ta = document.getElementById('commentText');
+  const video = document.getElementById('reviewVideo');
+  ta.addEventListener('focus', () => { if (video && !video.paused) video.pause(); });
 }
 
-if(!window.showOpenFilePicker){
-  console.warn('File System Access API not supported — live sync will be disabled; use manual import/export.');
+function renderCommentCard(c, validation) {
+  return `<div class="comment-card" id="cmt_${c.id}">
+    <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round} | ${c.source} | ${c.type}</div>
+    <img src="${c.screenshot}">
+    <div>${c.text}</div>
+    <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+    ${c.devStatus ? `<div class="small">Dev marked: <b>${c.devStatus}</b> ${c.devNote ? '- ' + c.devNote : ''}</div>` : ''}
+    ${validation ? `
+      <div class="flexgap" style="margin-top:6px">
+        <button class="success" data-action="approveFix" data-id="${c.id}" ${c.fixStatus==='approved'?'disabled':''}>Approve Fix</button>
+        <button class="warn" data-action="followup" data-id="${c.id}">Add Follow-up</button>
+      </div>
+      ${c.fixStatus ? `<div class="small">Fix Status: <b>${c.fixStatus}</b> ${c.followupText ? '- ' + c.followupText : ''}</div>` : ''}
+    ` : `
+      <div class="flexgap" style="margin-top:6px">
+        <button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>
+      </div>
+    `}
+  </div>`;
 }
+
+function attachVideoHandlers() {
+  const video = document.getElementById('reviewVideo');
+  if (!video) return;
+  const v = findVideo(activeVideoId);
+  if (v) {
+    const key = cacheKey(v);
+    if (!video.hasAttribute('src') && videoSrcCache[key]) {
+      video.src = videoSrcCache[key];
+    }
+    video.addEventListener('loadedmetadata', () => {
+      if (!v.durationSec) { v.durationSec = video.duration; saveState(); }
+      const t = videoTimeCache[key];
+      if (t) video.currentTime = t;
+    });
+    video.addEventListener('timeupdate', () => { videoTimeCache[key] = video.currentTime; });
+  }
+}
+
+/* =========================================================
+   FIX SCREEN — same static-shell pattern for the developer
+   ========================================================= */
+screens.fix = function () {
+  const v = findVideo(activeVideoId);
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${v.name}</b> — Round ${v.round} (Fixing)</div>
+    <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+  </div>
+  <div class="layout">
+    <div class="video-col">
+      <div class="flexgap" style="margin-bottom:8px"><button data-action="browseVideo">Browse Video File</button></div>
+      <video id="reviewVideo" controls></video>
+    </div>
+    <div class="comments-col" id="fixPanel"></div>
+  </div>`;
+  attachVideoHandlers();
+  renderFixPanel();
+};
+
+function renderFixPanel() {
+  const panel = document.getElementById('fixPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  panel.innerHTML = `
+    <h3>Comments to Address</h3>
+    ${v.comments.map(c => `
+      <div class="comment-card">
+        <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round}</div>
+        <img src="${c.screenshot}">
+        <div>${c.text}</div>
+        <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+        ${c.fixStatus === 'followup' ? `<div class="small" style="color:#b45309">Follow-up: ${c.followupText}</div>` : ''}
+        <div class="flexgap" style="margin-top:6px">
+          <button class="success" data-action="markAddressed" data-id="${c.id}" ${c.devStatus==='addressed'?'disabled':''}>Mark Addressed</button>
+          <button class="danger" data-action="markNotAddressed" data-id="${c.id}" ${c.devStatus==='not-addressed'?'disabled':''}>Can't Fix</button>
+        </div>
+        ${c.devStatus ? `<div class="small">Status: <b>${c.devStatus}</b></div>` : ''}
+      </div>`).join('')}
+    <button class="success" style="width:100%;margin-top:10px" data-action="allFixesComplete">All Fixes Completed</button>
+  `;
+}
+
+screens.signedoff = function () {
+  const v = findVideo(activeVideoId);
+  document.getElementById('app').innerHTML = `
+  <div class="topbar"><div><b>${v.name}</b> — Signed Off</div>
+  <button class="secondary" data-action="backToDashboard">Back to Queue</button></div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <h3>All comments resolved and approved. Video is signed off.</h3>
+    ${v.comments.map(c => `<div class="comment-card"><div>${fmtTime(c.time)} — ${c.text}</div><div class="small">Fix: ${c.fixStatus}</div></div>`).join('')}
+    ${currentUser.role === 'reviewer' ? `<button class="danger" data-action="rollback">Rollback to Fix Stage</button>` : ''}
+  </div>`;
+};
+
+/* ============== ACTIONS ============== */
+const actions = {
+  pickRole(el, id) { currentUser.role = id; screens.init(); },
+  async createDataFile() { await pickFile(true); screens.init(); },
+  async openDataFile() { await pickFile(false); screens.init(); },
+  enterApp() {
+    const name = currentUser.name.trim();
+    if (!name) { alert('Name is required'); return; }
+    currentUser.name = name;
+    screen = 'dashboard';
+    render();
+  },
+  logout() { currentUser = { name:'', role:'' }; screen = 'init'; render(); },
+  refreshNow: async () => { await loadState(); render(); },
+  openStatusDashboard() { screen = 'statusDashboard'; render(); },
+  clearStatusFilters() { statusFilters = { app:'', status:'', videoSearch:'' }; render(); },
+  exportCsv() {
+    let rows = [['Video','Round','Timestamp','Comment','Source','LoggedBy','LoggedAt','DevStatus','FixStatus']];
+    state.videos.forEach(v => v.comments.forEach(c => {
+      rows.push([v.name, c.round, fmtTime(c.time), c.text.replace(/\n/g,' '), c.source, c.loggedBy, c.loggedAt, c.devStatus||'', c.fixStatus||'']);
+    }));
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'review-log.csv'; a.click();
+  },
+  openAddVideo() {
+    document.getElementById('app').insertAdjacentHTML('beforeend', `
+    <div class="modal-bg" id="modal"><div class="modal">
+      <h3>Add New Video Entry</h3>
+      <label>Application Name</label>
+      <input type="text" id="newAppName" placeholder="Application name">
+      <label style="margin-top:8px;display:block">Video Name</label>
+      <input type="text" id="newVideoName" placeholder="Video name / description">
+      <div class="flexgap" style="margin-top:12px"><button data-action="saveNewVideo">Save</button><button class="secondary" data-action="closeModal">Cancel</button></div>
+    </div></div>`);
+  },
+  closeModal() { document.getElementById('modal')?.remove(); },
+  async saveNewVideo() {
+    const appName = document.getElementById('newAppName').value.trim();
+    const name = document.getElementById('newVideoName').value.trim();
+    if (!name) return;
+    await loadState();
+    state.videos.push({ id: uid(), appName, name, status:'pending_review', round:1, lock:null, addedBy: currentUser.name, addedAt: nowStr(), comments:[], durationSec:null });
+    await saveState();
+    actions.closeModal();
+    render();
+  },
+  async startReview(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
+    v.status = 'in_review';
+    v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
+    await saveState();
+    activeVideoId = id; screen = 'review'; render();
+  },
+  openReview(el, id) { activeVideoId = id; screen = 'review'; render(); },
+  async startFix(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'developer')) { toast('Locked by someone else'); render(); return; }
+    v.status = 'in_fix';
+    v.lock = { role:'developer', by: currentUser.name, at: nowStr() };
+    await saveState();
+    activeVideoId = id; screen = 'fix'; render();
+  },
+  openFix(el, id) { activeVideoId = id; screen = 'fix'; render(); },
+  async startValidation(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
+    v.status = 'in_validation';
+    v.round += 1;
+    v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
+    await saveState();
+    activeVideoId = id; screen = 'review'; render();
+  },
+  openSignedOff(el, id) { activeVideoId = id; screen = 'signedoff'; render(); },
+  backToDashboard() { screen = 'dashboard'; render(); },
+
+  browseVideo() {
+    const input = document.getElementById('videoFileInput');
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      const video = document.getElementById('reviewVideo');
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      const v = findVideo(activeVideoId);
+      if (v) videoSrcCache[cacheKey(v)] = url;
+    };
+    input.click();
+  },
+
+  toggleMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('Speech recognition not supported in this browser'); return; }
+    const btn = document.getElementById('micBtn');
+    if (recognition) { recognition.stop(); recognition = null; btn.textContent = '🎤'; return; }
+    const video = document.getElementById('reviewVideo');
+    if (video && !video.paused) video.pause();
+    recognition = new SR();
+    recognition.continuous = true; recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      let text = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript + ' ';
+      const ta = document.getElementById('commentText');
+      if (ta) ta.value += text;
+    };
+    recognition.onend = () => { const b = document.getElementById('micBtn'); if (b) b.textContent = '🎤'; recognition = null; };
+    recognition.start();
+    btn.textContent = '⏹';
+  },
+
+  async submitComment() {
+    const video = document.getElementById('reviewVideo');
+    const text = document.getElementById('commentText').value.trim();
+    if (!text) { toast('Enter a comment'); return; }
+    if (!video.src) { toast('Browse a video first'); return; }
+    const v = findVideo(activeVideoId);
+    const currentTimeAtSubmit = video.currentTime; // captured BEFORE any DOM changes
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(video.videoWidth, 480);
+    canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    v.comments.push({
+      id: uid(), time: currentTimeAtSubmit, screenshot: canvas.toDataURL('image/jpeg', 0.6),
+      text, type: recognition ? 'voice' : 'text', source:'manual',
+      loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
+      devStatus: null, devNote:'', fixStatus: null, followupText:''
+    });
+    await saveState();
+    renderCommentsPanel(); // video element untouched — no jump, no reset
+  },
+
+  seekTo(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    const video = document.getElementById('reviewVideo');
+    if (video && c) video.currentTime = c.time;
+  },
+
+  async deleteComment(el, id) {
+    const v = findVideo(activeVideoId);
+    v.comments = v.comments.filter(c => c.id !== id);
+    await saveState();
+    renderCommentsPanel();
+  },
+
+  async reviewComplete() {
+    const v = findVideo(activeVideoId);
+    if (v.status === 'in_review') {
+      v.status = 'reviewed'; v.lock = null;
+      await saveState();
+      toast('Review submitted. Locked released for developer.');
+    } else if (v.status === 'in_validation') {
+      const open = v.comments.filter(c => c.fixStatus !== 'approved');
+      if (open.length === 0) { v.status = 'signed_off'; v.lock = { role:'locked', by:'system', at: nowStr() }; toast('All fixes approved — Video Signed Off!'); }
+      else { v.status = 'reviewed'; v.lock = null; toast('Some items still open — sent back to developer.'); }
+      await saveState();
+    }
+    screen = 'dashboard'; render();
+  },
+
+  async markAddressed(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.devStatus = 'addressed';
+    await saveState();
+    renderFixPanel();
+  },
+  async markNotAddressed(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.devStatus = 'not-addressed';
+    c.devNote = prompt('Reason / note:', c.devNote || '') || '';
+    await saveState();
+    renderFixPanel();
+  },
+  async allFixesComplete() {
+    const v = findVideo(activeVideoId);
+    const pending = v.comments.filter(c => !c.devStatus);
+    if (pending.length) { toast('Please mark all comments before completing.'); return; }
+    const confirmUpload = confirm('Confirm: Have you uploaded the latest MP4 file to SharePoint?');
+    if (confirmUpload) {
+      v.status = 'fixed'; v.lock = null;
+      await saveState();
+      toast('Marked fixed and uploaded. Sent to reviewer.');
+      screen = 'dashboard'; render();
+    }
+  },
+
+  async approveFix(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.fixStatus = 'approved';
+    await saveState();
+    renderCommentsPanel();
+  },
+  async followup(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    const txt = prompt('Follow-up note:');
+    if (txt) { c.fixStatus = 'followup'; c.followupText = txt; c.devStatus = null; }
+    await saveState();
+    renderCommentsPanel();
+  },
+  async markAllFixed() {
+    const v = findVideo(activeVideoId);
+    v.comments.forEach(c => { if (c.devStatus === 'addressed') c.fixStatus = 'approved'; });
+    await saveState();
+    renderCommentsPanel();
+  },
+  prevComment() {
+    const v = findVideo(activeVideoId);
+    if (!v.comments.length) return;
+    activeCommentIndex = (activeCommentIndex - 1 + v.comments.length) % v.comments.length;
+    const c = v.comments[activeCommentIndex];
+    document.getElementById('reviewVideo').currentTime = c.time;
+    document.getElementById('cmt_' + c.id)?.scrollIntoView({behavior:'smooth'});
+  },
+  nextComment() {
+    const v = findVideo(activeVideoId);
+    if (!v.comments.length) return;
+    activeCommentIndex = (activeCommentIndex + 1) % v.comments.length;
+    const c = v.comments[activeCommentIndex];
+    document.getElementById('reviewVideo').currentTime = c.time;
+    document.getElementById('cmt_' + c.id)?.scrollIntoView({behavior:'smooth'});
+  },
+
+  async rollback() {
+    const v = findVideo(activeVideoId);
+    v.round += 1;
+    v.status = 'fixed'; v.lock = null;
+    await saveState();
+    toast('Rolled back to Fix stage. New round started: R' + v.round);
+    screen = 'dashboard'; render();
+  },
+
+  /* ---- Auto URL scan using Tesseract.js ---- */
+  async autoScanUrls() {
+    const video = document.getElementById('reviewVideo');
+    if (!video.src) { toast('Browse a video first'); return; }
+    if (!video.duration || isNaN(video.duration)) { toast('Video not ready yet'); return; }
+    pendingObservations = [];
+    scanAbort = false;
+    const progressEl = document.getElementById('scanProgress');
+    const duration = video.duration;
+    for (let t = 0; t < duration && !scanAbort; t += 5) {
+      progressEl.textContent = `Scanning ${fmtTime(t)} / ${fmtTime(duration)}...`;
+      await seekVideo(video, t);
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const regions = cornerRegions(canvas);
+      for (const r of regions) {
+        try {
+          const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
+          const urls = extractUrls(text);
+          if (urls.length) {
+            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: canvas.toDataURL('image/jpeg', 0.6) });
+          }
+        } catch (e) { /* ignore OCR error for this region */ }
+      }
+      renderObservations();
+    }
+    progressEl.textContent = `Scan complete. ${pendingObservations.length} observation(s) found.`;
+  },
+
+  acceptObs(el, id) {
+    const obs = pendingObservations.find(o => o.id === id);
+    const v = findVideo(activeVideoId);
+    v.comments.push({
+      id: uid(), time: obs.time, screenshot: obs.screenshot, text: `URL detected (${obs.corner}): ${obs.text}`,
+      type:'text', source:'url-auto', loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
+      devStatus: null, devNote:'', fixStatus: null, followupText:''
+    });
+    pendingObservations = pendingObservations.filter(o => o.id !== id);
+    saveState().then(() => { renderObservations(); renderCommentsPanel(); });
+  },
+  rejectObs(el, id) {
+    pendingObservations = pendingObservations.filter(o => o.id !== id);
+    renderObservations();
+  }
+};
+
+function seekVideo(video, t) {
+  return new Promise(res => {
+    const onSeek = () => { video.removeEventListener('seeked', onSeek); res(); };
+    video.addEventListener('seeked', onSeek);
+    video.currentTime = t;
+  });
+}
+function cornerRegions(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const cw = Math.floor(w * 0.28), ch = Math.floor(h * 0.28);
+  const coords = [['TopLeft',0,0], ['TopRight', w - cw, 0], ['BottomLeft', 0, h - ch], ['BottomRight', w - cw, h - ch]];
+  return coords.map(([label, x, y]) => {
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    c.getContext('2d').drawImage(canvas, x, y, cw, ch, 0, 0, cw, ch);
+    return { label, canvas: c };
+  });
+}
+function extractUrls(text) {
+  const re = /((https?:\/\/|www\.)[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|gov|edu)[^\s]*)/gi;
+  return text.match(re) || [];
+}
+function renderObservations() {
+  const area = document.getElementById('obsArea');
+  if (!area) return;
+  area.innerHTML = pendingObservations.map(o => `
+    <div class="obs-card">
+      <div class="meta">⏱ ${fmtTime(o.time)} — ${o.corner}</div>
+      <div><b>${o.text}</b></div>
+      <img src="${o.screenshot}" style="width:150px;border-radius:4px">
+      <div class="flexgap"><button class="success" data-action="acceptObs" data-id="${o.id}">Accept</button><button class="danger" data-action="rejectObs" data-id="${o.id}">Reject</button></div>
+    </div>`).join('');
+}
+
+/* ============== EVENT DELEGATION ============== */
+document.getElementById('app').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  e.preventDefault();
+  const fn = actions[el.dataset.action];
+  if (fn) fn(el, el.dataset.id, e);
+});
+
+/* ============== INIT ============== */
+render();
 </script>
 </body>
 </html>
