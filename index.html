@@ -14,1660 +14,1837 @@
                         </head>
                         <body>
                             <!DOCTYPE html>
+<!-- ============================================================
+     STABLE VERSION v1.0 — confirmed working baseline.
+     (Includes: sync banner with name/role, Review Validations
+     table spacing fix, role-based Review Complete button label.)
+     ============================================================ -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Video Review & Comment Logger</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-  :root{
-    --sn-navy:#0B2E59; --sn-navy-dark:#06203E; --sn-navy-light:#15407A;
-    --sn-green:#2E9E3F; --sn-green-dark:#247A32;
-    --sn-bg:#F5F7FA; --sn-panel:#FFFFFF; --sn-border:#E2E8F0; --sn-border-light:#EEF2F6;
-    --sn-text:#1B1F23; --sn-muted:#64748B;
-    --sn-warn:#B8860B; --sn-warn-bg:#FFF7E0; --sn-danger:#DC2626; --sn-danger-bg:#FEF2F2; --sn-ok-bg:#ECFDF3;
-    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
-    --shadow-md:0 4px 10px rgba(16,24,40,.08);
-    --shadow-lg:0 10px 30px rgba(16,24,40,.15);
-    --radius:10px;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--sn-bg);color:var(--sn-text);font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
-  header{display:flex;align-items:center;gap:14px;padding:14px 24px;background:linear-gradient(135deg, var(--sn-navy) 0%, var(--sn-navy-dark) 100%);color:white;flex-wrap:wrap;box-shadow:var(--shadow-md);position:relative;z-index:10;}
-  header h1{font-size:18px;margin:0;flex:1;min-width:220px;font-weight:700;letter-spacing:-.01em;}
-  header .tagline{font-size:11.5px;opacity:.7;display:block;margin-top:3px;font-weight:400;}
-  header #roleLabel{background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;font-weight:600;}
-  header #headerFileStatus{background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;}
-  button{background:var(--sn-green);border:none;color:white;padding:9px 16px;border-radius:7px;cursor:pointer;font-weight:600;font-size:13.5px;transition:all .18s ease;box-shadow:var(--shadow-sm);}
-  button:hover:not(:disabled){background:var(--sn-green-dark);box-shadow:var(--shadow-md);transform:translateY(-1px);}
-  button:active:not(:disabled){transform:translateY(0);}
-  button.secondary{background:white;color:var(--sn-navy);border:1.5px solid var(--sn-border);box-shadow:none;}
-  button.secondary:hover:not(:disabled){background:#F8FAFC;border-color:var(--sn-navy-light);}
-  button.danger{background:var(--sn-danger);}
-  button.danger:hover:not(:disabled){background:#B91C1C;}
-  button.link-btn{background:transparent;color:#BFDBFE;border:none;padding:0;font-size:12.5px;text-decoration:underline;box-shadow:none;font-weight:500;}
-  button.link-btn:hover{color:white;transform:none;}
-  button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;}
-  select,input[type=text],input[type=checkbox],textarea{background:white;color:var(--sn-text);border:1.5px solid var(--sn-border);border-radius:7px;padding:8px 11px;font-size:13.5px;transition:border-color .15s;}
-  select:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:var(--sn-navy-light);box-shadow:0 0 0 3px rgba(21,64,122,.1);}
-  .tabs{display:flex;gap:2px;padding:0 24px;background:var(--sn-navy-dark);box-shadow:inset 0 -1px 0 rgba(255,255,255,.06);}
-  .tabs button{background:transparent;color:rgba(255,255,255,.65);border-radius:8px 8px 0 0;padding:13px 18px;font-weight:600;font-size:13.5px;border-bottom:3px solid transparent;box-shadow:none;transition:all .18s;}
-  .tabs button:hover{background:rgba(255,255,255,.06);color:white;transform:none;}
-  .tabs button.active{color:white;border-bottom:3px solid var(--sn-green);background:rgba(255,255,255,.05);}
-  .subtabs{display:flex;gap:8px;margin-bottom:16px;}
-  .subtabs button{background:white;color:var(--sn-navy);border-radius:8px;border:1.5px solid var(--sn-border);box-shadow:var(--shadow-sm);}
-  .subtabs button.active{background:var(--sn-navy);color:white;border-color:var(--sn-navy);}
-  .view{display:none;padding:24px;max-width:1450px;margin:0 auto;}
-  .view.active{display:block;animation:fadeIn .25s ease;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
-  .subview{display:none;}
-  .subview.active{display:block;}
-  .card{background:var(--sn-panel);border:1px solid var(--sn-border-light);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
-  .card:hover{box-shadow:var(--shadow-md);}
-  .section-title{color:var(--sn-navy);font-size:15px;font-weight:700;margin:0 0 12px 0;border-left:4px solid var(--sn-green);padding-left:11px;letter-spacing:-.01em;}
-  .badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.01em;}
-  .b-signedoff{background:var(--sn-ok-bg);color:var(--sn-green-dark);}
-  .b-reviewer{background:#EFF6FF;color:#1D4ED8;}
-  .b-developer{background:var(--sn-warn-bg);color:#92400E;}
-  .b-none{background:#F1F5F9;color:var(--sn-muted);}
-  .modal-bg{position:fixed;inset:0;background:rgba(6,32,62,.65);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease;}
-  .modal{background:white;padding:32px;border-radius:16px;min-width:400px;max-width:460px;box-shadow:var(--shadow-lg);animation:modalPop .25s cubic-bezier(.2,1,.3,1);}
-  @keyframes modalPop{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
-  .modal h2{color:var(--sn-navy);margin-top:0;font-size:22px;font-weight:800;letter-spacing:-.02em;}
-  .modal p.note{margin-top:4px;}
-  .modal label.fieldLabel{display:block;font-size:12.5px;font-weight:600;color:var(--sn-navy);margin-bottom:6px;}
-  .lockbar{background:var(--sn-warn-bg);color:#92400E;padding:10px 24px;font-size:13px;display:none;font-weight:500;}
-  .micbar{background:linear-gradient(135deg,#1D4ED8,#1E40AF);color:white;padding:10px 24px;font-size:13px;display:none;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;z-index:150;box-shadow:var(--shadow-md);}
-  .micbar.active{display:flex;}
-  video{width:100%;max-height:52vh;background:#0A0A0A;border-radius:10px;box-shadow:var(--shadow-md);}
-  .vwrap{display:flex;gap:18px;flex-wrap:wrap;}
-  .vcol{flex:2;min-width:380px;}
-  .ccol{flex:1;min-width:300px;}
-  .navrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;}
-  .current-comment-box{font-size:13.5px;color:var(--sn-text);margin:0;line-height:1.6;}
-  .currentIssue{font-size:12.5px;color:var(--sn-muted);flex:1;min-width:200px;}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  th,td{border-bottom:1px solid var(--sn-border-light);padding:9px 10px;text-align:left;vertical-align:top;}
-  th{background:#F8FAFC;color:var(--sn-navy);font-weight:700;border-bottom:2px solid var(--sn-border);}
-  th small{display:block;font-weight:400;color:var(--sn-muted);margin-top:2px;}
-  tbody tr{transition:background .12s;}
-  tbody tr:hover{background:#FAFBFC;}
-  .thumb{width:72px;height:42px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--sn-border);transition:transform .15s;}
-  .thumb:hover{transform:scale(1.08);box-shadow:var(--shadow-md);}
-  .note{font-size:12.5px;color:var(--sn-muted);line-height:1.5;}
-  input.followup{width:100%;font-size:12.5px;}
-  .fileStatus{font-size:12.5px;color:var(--sn-muted);padding:10px 14px;background:white;border:1.5px dashed var(--sn-border);border-radius:8px;margin-bottom:14px;font-weight:500;}
-  .statbar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
-  .stat{flex:1;min-width:160px;background:white;border:1px solid var(--sn-border-light);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
-  .stat:hover{box-shadow:var(--shadow-md);}
-  .stat .num{font-size:26px;font-weight:800;color:var(--sn-navy);letter-spacing:-.02em;}
-  .lightbox-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:300;cursor:zoom-out;}
-  .lightbox-bg.active{display:flex;animation:fadeIn .2s;}
-  .lightbox-bg img{max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
-  .multiselect-box{border:1.5px solid var(--sn-border);border-radius:8px;padding:10px;max-height:150px;overflow:auto;background:white;min-width:190px;}
-  .multiselect-box label{display:block;font-size:12.5px;padding:4px 2px;cursor:pointer;border-radius:4px;transition:background .12s;}
-  .multiselect-box label:hover{background:#F8FAFC;}
-  .filterbar{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-start;}
-  .obs-item{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--sn-border-light);border-radius:8px;padding:12px;margin-bottom:10px;background:#FAFBFC;transition:box-shadow .15s;}
-  .obs-item:hover{box-shadow:var(--shadow-sm);}
-  .obs-item img{width:96px;border-radius:6px;}
-  .obs-actions{display:flex;gap:8px;margin-top:8px;}
-  .obs-actions button{padding:6px 12px;font-size:12px;}
-  .dash-card{display:flex;flex-direction:column;background:white;border:1px solid var(--sn-border-light);border-radius:10px;padding:16px 18px;text-align:left;box-shadow:var(--shadow-sm);transition:all .18s;}
-  .dash-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
-  .dash-card-title{font-weight:700;color:var(--sn-navy);font-size:14.5px;margin-bottom:8px;letter-spacing:-.01em;}
-  .dash-card-actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;margin-top:12px;border-top:1px solid var(--sn-border-light);}
-  .dash-card-actions button{flex:1;min-width:90px;}
-  .group-controls{display:flex;gap:8px;margin-bottom:12px;}
-  .app-group{border:1px solid var(--sn-border-light);border-radius:12px;margin-bottom:14px;background:white;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s;}
-  .app-group:hover{box-shadow:var(--shadow-md);}
-  .app-header{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;background:linear-gradient(to right, #F8FAFC, #FFFFFF);transition:background .15s;}
-  .app-header:hover{background:#F1F5F9;}
-  .app-header .chevron{transition:transform .2s;font-size:12px;color:var(--sn-navy);}
-  .app-header.collapsed .chevron{transform:rotate(-90deg);}
-  .app-header .app-name{font-weight:700;color:var(--sn-navy);font-size:14.5px;flex:1;letter-spacing:-.01em;}
-  .app-counts{display:flex;gap:7px;flex-wrap:wrap;}
-  .app-body{padding:14px 18px 18px;animation:expandDown .2s ease;}
-  .app-body.collapsed{display:none;}
-  @keyframes expandDown{from{opacity:0;}to{opacity:1;}}
-  .video-group{border:1px solid var(--sn-border-light);border-radius:8px;margin-bottom:10px;background:#FCFDFE;overflow:hidden;}
-  .video-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background .12s;}
-  .video-header:hover{background:#F3F6F9;}
-  .video-header .chevron{transition:transform .2s;font-size:11px;color:var(--sn-navy);}
-  .video-header.collapsed .chevron{transform:rotate(-90deg);}
-  .video-header .video-name{font-weight:600;color:var(--sn-navy);font-size:13.5px;flex:1;}
-  .video-body{padding:10px 14px 14px;}
-  .video-body.collapsed{display:none;}
-  .video-meta{font-size:11.5px;color:var(--sn-muted);}
-  .dev-restricted-note{background:var(--sn-warn-bg);color:#92400E;padding:12px 16px;border-radius:8px;font-size:12.5px;margin-bottom:14px;border-left:3px solid var(--sn-warn);}
-  .dash-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1px solid var(--sn-border-light);border-radius:10px;background:white;margin-bottom:10px;box-shadow:var(--shadow-sm);transition:box-shadow .15s;}
-  .dash-row:hover{box-shadow:var(--shadow-md);}
-  .dash-row b{color:var(--sn-navy);}
-  textarea.edit-inline{width:100%;font-size:12.5px;}
-  .sync-banner{background:#EFF6FF;color:#1D4ED8;padding:8px 24px;font-size:12.5px;display:none;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid #DBEAFE;font-weight:500;}
-  .sync-banner.show{display:flex;}
-  .sync-dot{width:8px;height:8px;border-radius:50%;background:#1D4ED8;animation:pulseDot 1.2s infinite;flex-shrink:0;}
-  @keyframes pulseDot{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
-  .audit-note{font-size:10.5px;color:var(--sn-muted);margin-top:4px;font-style:italic;}
-  .sync-timers{display:flex;gap:14px;font-size:11.5px;color:#1D4ED8;opacity:.85;}
-  .sync-timers b{font-weight:700;}
-  .sync-msg{font-weight:700;}
+:root{
+  --navy:#0F2A4A; --navy-light:#16407a; --indigo:#4F46E5; --green:#16A34A; --green-dark:#128a3e;
+  --amber:#D97706; --blue:#2563EB; --red:#DC2626;
+  --bg:#F3F5F8; --surface:#FFFFFF; --border:#E4E8EE; --border-strong:#D3D9E2;
+  --text:#1A2233; --muted:#6B7482; --muted-light:#9AA2B1;
+  --radius-sm:8px; --radius:12px; --radius-lg:18px;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 2px 8px rgba(16,24,40,.06);
+  --shadow-lg:0 12px 32px rgba(16,24,40,.14);
+}
+*{box-sizing:border-box;}
+body{
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  margin:0; background:var(--bg); color:var(--text); line-height:1.55; font-size:14px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:inherit; letter-spacing:-.01em;}
+header.app-header{
+  background:linear-gradient(120deg,var(--navy) 0%, var(--navy-light) 100%);
+  color:#fff; padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 4px 14px rgba(10,30,60,.25);
+  flex-wrap:wrap; gap:10px;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand .logo{
+  width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.14);
+  display:flex; align-items:center; justify-content:center; font-size:17px;
+}
+header.app-header h1{font-size:16.5px; margin:0; font-weight:700;}
+header.app-header .tagline{font-size:11.5px; color:#c9d7ee; font-weight:400; margin-top:1px;}
+.header-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.user-chip{
+  display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); padding:6px 14px 6px 6px; border-radius:30px; font-size:12.5px;
+}
+.user-chip .avatar{
+  width:24px; height:24px; border-radius:50%; background:#fff; color:var(--navy); font-weight:700; font-size:11px;
+  display:flex; align-items:center; justify-content:center;
+}
+.role-pill{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#c9d7ee;}
+
+.header-sync{
+  display:none; align-items:center; gap:8px; background:rgba(255,255,255,.12); padding:6px 14px; border-radius:30px; font-size:12px; color:#eaf0fb; font-weight:600;
+}
+.header-sync .dot{width:7px; height:7px; border-radius:50%; background:#4ADE80; animation:pulse 1.4s infinite; flex-shrink:0;}
+@keyframes pulse{0%{opacity:1;}50%{opacity:.25;}100%{opacity:1;}}
+
+nav.tabs{
+  display:flex; gap:4px; background:#fff; border-bottom:1px solid var(--border);
+  padding:0 24px; position:sticky; top:0; z-index:60; box-shadow:var(--shadow-sm);
+}
+nav.tabs button{
+  background:none; border:none; padding:14px 16px; cursor:pointer; font-size:13.5px; color:var(--muted);
+  border-bottom:2.5px solid transparent; transition:all .18s; font-weight:600; display:flex; align-items:center; gap:6px;
+}
+nav.tabs button.active{border-bottom-color:var(--green); color:var(--navy);}
+nav.tabs button:hover{color:var(--navy);}
+main{padding:24px 28px 60px; max-width:1360px; margin:0 auto;}
+.tab-content{display:none; animation:fadein .2s ease;}
+.tab-content.active{display:block;}
+@keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 20px; margin-bottom:16px; box-shadow:var(--shadow-sm); transition:box-shadow .2s;
+}
+.card-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.card-header h3{margin:0; font-size:14px; color:var(--navy); font-weight:700; display:flex; align-items:center; gap:7px;}
+.card-header .hint{font-size:11.5px; color:var(--muted-light); font-weight:500;}
+button{font-family:inherit; border-radius:9px; cursor:pointer; transition:all .15s; font-weight:600; font-size:13px;}
+.btn{background:var(--green); color:#fff; border:1px solid var(--green); padding:9px 16px;}
+.btn:hover{background:var(--green-dark); border-color:var(--green-dark);}
+.btn.secondary{background:#fff; color:var(--navy); border:1px solid var(--border-strong);}
+.btn.secondary:hover{background:#F6F8FB; border-color:var(--navy-light);}
+.btn.ghost{background:transparent; color:var(--muted); border:1px solid transparent; padding:7px 10px;}
+.btn.ghost:hover{background:#F0F2F6; color:var(--navy);}
+.btn.danger{background:#fff; color:var(--red); border:1px solid #F3C1C1;}
+.btn.danger:hover{background:#FEF2F2;}
+.btn.sm{padding:6px 11px; font-size:12px;}
+.btn:disabled{opacity:.42; cursor:not-allowed; filter:none; transform:none;}
+.btn-block{width:100%;}
+input[type=text], textarea, select{
+  width:100%; padding:9px 12px; border:1px solid var(--border-strong); border-radius:9px;
+  font-size:13.5px; font-family:inherit; background:#fff; color:var(--text); transition:border-color .15s, box-shadow .15s;
+}
+input[type=text]:focus, textarea:focus, select:focus{outline:none; border-color:var(--indigo); box-shadow:0 0 0 3px rgba(79,70,229,.12);}
+textarea{min-height:130px; resize:vertical; line-height:1.5;}
+input:disabled, textarea:disabled, select:disabled{background:#F4F5F7; color:var(--muted-light); cursor:not-allowed;}
+label{font-size:11px; font-weight:700; color:var(--muted); display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px;}
+.badge{display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; color:#fff;}
+.badge.dev{background:var(--amber);}
+.badge.rev{background:var(--blue);}
+.badge.signed{background:var(--green);}
+.badge.none{background:#9AA2B1;}
+.badge.lock{background:#FDEBD0; color:#92400E; border:1px solid #F7D9A5;}
+.toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:4px;}
+.toolbar > div{flex:1; min-width:170px;}
+.workspace{display:grid; grid-template-columns: 1.65fr 1fr; gap:18px; align-items:start; margin-top:16px;}
+@media (max-width: 960px){ .workspace{grid-template-columns:1fr;} }
+.workspace-right{position:sticky; top:68px;}
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(10,20,40,.5); display:flex; align-items:center; justify-content:center; z-index:1000;
+  backdrop-filter:blur(3px);
+}
+.modal{
+  background:#fff; border-radius:var(--radius-lg); padding:34px; width:460px; max-width:92vw;
+  animation:modalIn .22s cubic-bezier(.2,.9,.3,1); box-shadow:var(--shadow-lg);
+}
+@keyframes modalIn{from{opacity:0; transform:scale(.95) translateY(6px);} to{opacity:1; transform:scale(1) translateY(0);}}
+.modal h2{margin:0 0 4px; color:var(--navy); font-size:21px;}
+.modal .step-label{color:var(--indigo); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; margin:18px 0 8px;}
+.role-btns{display:flex; gap:10px; margin:10px 0 4px;}
+.role-btns button{flex:1; padding:15px 10px; font-size:13.5px; border-radius:11px;}
+.hidden{display:none !important;}
+
+#resumeSyncBanner{
+  position:fixed; top:14px; right:14px; background:#FFF7ED; color:#9A3412; border:1px solid #FDBA74;
+  border-radius:30px; padding:7px 8px 7px 16px; font-size:12.5px; display:none; align-items:center; gap:10px; z-index:901;
+  box-shadow:var(--shadow-lg); font-weight:600;
+}
+#resumeSyncBanner button{background:#fff; color:var(--navy); border:1px solid var(--border-strong); padding:6px 14px; font-size:12px; border-radius:20px;}
+
+#recordingBanner{
+  position:fixed; top:0; left:0; right:0; background:var(--indigo); color:#fff; padding:9px 16px; font-size:12.5px;
+  display:none; align-items:center; justify-content:center; gap:12px; z-index:902; box-shadow:0 2px 10px rgba(0,0,0,.18); font-weight:600;
+}
+#recordingBanner button{background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.4); padding:5px 12px; font-size:11.5px;}
+
+.lock-banner{
+  display:flex; align-items:center; gap:8px; background:#FFF7ED; border:1px solid #FDE0B0; color:#92400E;
+  padding:9px 13px; border-radius:10px; font-size:12.5px; font-weight:600; margin-bottom:12px;
+}
+.detected-info{
+  margin-top:10px; padding:11px 15px; background:#ECFDF3; border:1px solid #A7E4B9; border-radius:10px;
+  font-size:13px; color:#166534; display:none; align-items:center; gap:8px; font-weight:500;
+}
+.detected-info.show{display:flex;}
+.detected-info strong{color:var(--navy);}
+.group-header{
+  display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px 13px; background:#F3F5F9;
+  border:1px solid var(--border); border-radius:10px; margin-top:8px; transition:background .15s;
+}
+.group-header:hover{background:#EAEDF3;}
+.group-header .chev{transition:transform .18s; display:inline-block; color:var(--muted-light); font-size:11px;}
+.group-header.expanded .chev{transform:rotate(90deg);}
+.group-body{padding-left:18px; display:none;}
+.group-body.open{display:block;}
+.video-group-header{
+  display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px 12px; background:#FAFBFD;
+  border:1px solid var(--border); border-radius:8px; margin-top:6px; font-size:12.5px; font-weight:600; transition:background .15s;
+}
+.video-group-header:hover{background:#F0F2F7;}
+
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th,td{padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top;}
+th{background:#F8F9FB; font-weight:700; color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.4px;}
+tbody tr:hover td{background:#FAFBFD;}
+img.thumb{width:56px; border-radius:6px; cursor:pointer; border:1px solid var(--border); transition:transform .15s;}
+img.thumb:hover{transform:scale(1.1);}
+.lightbox{position:fixed; inset:0; background:rgba(0,0,0,.86); display:flex; align-items:center; justify-content:center; z-index:1200;}
+.lightbox img{max-width:90%; max-height:90%; border-radius:10px;}
+
+table.rv-comment-table{
+  table-layout: fixed;
+}
+table.rv-comment-table td, table.rv-comment-table th{
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+table.rv-comment-table select, table.rv-comment-table input[type=text]{
+  min-width: 0;
+}
+
+.stat-cards{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+.stat-card{
+  background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; min-width:130px;
+  box-shadow:var(--shadow-sm);
+}
+.stat-card .num{font-size:24px; font-weight:800; color:var(--navy);}
+.stat-card .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600;}
+video{width:100%; max-height:420px; background:#0a0e16; border-radius:10px; display:block;}
+.small-note{font-size:12px; color:var(--muted);}
+.flex-row{display:flex; gap:9px; align-items:center; flex-wrap:wrap;}
+.subtab-row{display:flex; gap:8px; margin-bottom:16px; background:#fff; padding:5px; border-radius:11px; border:1px solid var(--border); width:fit-content;}
+.subtab-row button{padding:8px 16px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-weight:600;}
+.subtab-row button.active{background:var(--navy); color:#fff;}
+.empty-state{text-align:center; padding:40px 20px; color:var(--muted-light);}
+.empty-state .icon{font-size:32px; margin-bottom:8px;}
+.checkbox-row label{display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:500; text-transform:none; color:var(--text); background:#F6F8FB; padding:6px 11px; border-radius:20px; border:1px solid var(--border); cursor:pointer;}
+.activity-item{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+.activity-item:last-child{border-bottom:none;}
+.activity-icon{width:26px; height:26px; border-radius:50%; background:#EEF1F7; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0;}
+.activity-text strong{color:var(--navy);}
+.activity-time{color:var(--muted-light); font-size:11px; margin-top:1px;}
 </style>
 </head>
 <body>
 
-<div class="modal-bg" id="setupModal">
-  <div class="modal">
-    <h2>👋 Get started</h2>
-    <p class="note">Select your role, enter your name, then load your spreadsheet.</p>
-    <div style="display:flex;gap:10px;margin-bottom:16px;">
-      <button id="btnReviewer">👀 I'm a Reviewer</button>
-      <button id="btnDeveloper" class="secondary">🛠️ I'm a Developer (NIIT)</button>
-    </div>
-    <div id="nameSection" style="display:none;border-top:1px solid #eee;padding-top:16px;margin-bottom:16px;">
-      <label class="fieldLabel">Your name (shown on changes you make)</label>
-      <input type="text" id="userNameInput" placeholder="e.g., Priya Sharma" style="width:100%;">
-    </div>
-    <div id="fileSection" style="display:none;border-top:1px solid #eee;padding-top:16px;">
-      <p class="note" style="margin-top:0;">Role: <b id="roleConfirmLabel"></b> • Name: <b id="nameConfirmLabel"></b></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="secondary" id="btnDownloadTemplate">⬇ Download Blank Template</button>
-        <button id="btnImportSpreadsheet">📂 Import Spreadsheet</button>
-      </div>
-      <p class="note" style="margin-top:10px;">In Chrome/Edge, the tool reads the file every 3 seconds and writes back every 7 seconds. Every change is stamped with your name and the time it was made.</p>
+<div id="recordingBanner">🎤 Recording… <span id="recCountdown">02:00</span> <button id="stopRecFromBanner">Stop</button></div>
+<div id="resumeSyncBanner"><span>⚠️</span> Live sync paused — click to Resume Live Sync <button id="resumeSyncBtn">Resume</button></div>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="logo">🎬</div>
+    <div>
+      <h1>Video Review & Comment Logger</h1>
+      <div class="tagline">Collaborative QA tracking for training videos</div>
     </div>
   </div>
-</div>
-
-<div class="lightbox-bg" id="lightbox" onclick="this.classList.remove('active')"><img id="lightboxImg" src=""></div>
-<div class="lockbar" id="lockBar"></div>
-<div class="sync-banner" id="syncBanner">
-  <span class="sync-dot" id="syncDot"></span>
-  <span id="syncBannerText">Live sync active</span>
-  <span class="sync-timers">
-    <span>Next read: <b id="readCountdown">3s</b></span>
-    <span>Next write: <b id="writeCountdown">7s</b></span>
-  </span>
-  <button class="danger" id="btnEndSession" style="margin-left:auto;" disabled>🔚 End Session</button>
-</div>
-<div class="sync-banner" id="permissionBanner" style="background:#FEF2F2;color:#DC2626;">
-  <span class="sync-dot" style="background:#DC2626;"></span>
-  <span>⚠️ Live sync paused — your browser needs you to confirm file access again.</span>
-  <button id="btnResumeSync" style="margin-left:auto;">Click to Resume Live Sync</button>
-</div>
-<div class="micbar" id="micBar"><span>🎤</span> <b id="micBarLabel">Recording...</b> <button class="secondary" style="padding:4px 10px;margin-left:auto;" id="btnStopMicBar">Stop</button></div>
-
-<header>
-  <div><h1>Video Review & Comment Logger</h1><span class="tagline">Now Platform–styled review workspace</span></div>
-  <span id="roleLabel" style="font-size:12px;opacity:.85;"></span>
-  <span id="headerFileStatus" style="font-size:12px;opacity:.9;"></span>
-  <button class="link-btn" id="btnChangeFile" style="display:none;">Change spreadsheet</button>
+  <div class="header-right">
+    <div class="header-sync" id="headerSync">
+      <span class="dot"></span><span id="syncText">Next read: 2s / Next write: 3s</span>
+    </div>
+    <div class="user-chip" id="headerUserInfo" style="display:none;">
+      <div class="avatar" id="userAvatar">–</div>
+      <div>
+        <div id="userNameDisplay" style="font-weight:700;"></div>
+        <div class="role-pill" id="userRoleDisplay"></div>
+      </div>
+    </div>
+  </div>
 </header>
 
-<div class="tabs">
-  <button data-tab="home" class="active">Home / Read Me</button>
-  <button data-tab="dashboard">Dashboard</button>
-  <button data-tab="newreview">New Review</button>
-  <button data-tab="validations">Review Validations</button>
-</div>
+<nav class="tabs" id="tabNav">
+  <button data-tab="home" class="active">👋 Home</button>
+  <button data-tab="dashboard">📊 Dashboard</button>
+  <button data-tab="newreview">📝 New Review</button>
+  <button data-tab="validations">✅ Review Validations</button>
+</nav>
 
-<div class="view active" id="view-home">
-  <div class="card">
-    <h2 class="section-title">About this tool</h2>
-    <ul>
-      <li>Workflow: Reviewer logs comments → Developer marks "Fixed by NIIT" → once ALL comments on a video are fixed, it's "Ready for Reviewer" → Reviewer approves each fix → once ALL approved, video is "Signed Off."</li>
-      <li><b>Live Sync:</b> once imported in Chrome/Edge, the tool silently re-reads the file every <b>3 seconds</b> and writes back every <b>7 seconds</b>. The banner at the top shows live countdowns and a brief success message after each cycle. Changes from other sessions merge in automatically — whichever edit on a given field has the most recent timestamp wins.</li>
-      <li><b>End Session:</b> click the red "End Session" button in the sync banner when you're done. This pulls in any last-minute changes from other sessions, merges and saves everything, removes you from the active sessions list, and stops syncing — leaving the file ready for the next person.</li>
-      <li><b>10-minute check-in:</b> after 10 minutes of activity, you'll be asked whether to continue (merges all active sessions' changes and keeps syncing) or exit (saves and merges everything, then ends your session cleanly).</li>
-      <li><b>Change tracking:</b> every edit is stamped with your name and the exact time — visible under each comment, and saved as audit columns in the spreadsheet.</li>
-      <li><b>Developers cannot add new comments on any tab.</b> Developers may only mark "Fixed by NIIT" and add Follow-up Notes to existing comments.</li>
-      <li>Comments are grouped by Application → Video, collapsed by default. Use Expand All / Collapse All to control visibility quickly.</li>
-      <li>Signed-off videos are hidden from the Reviewer/Developer dashboard views but remain visible in Overview and in Review Validations' Signed-Off table.</li>
-      <li>Voice comments (Reviewer only): click Start Recording, speak, click Stop Recording when done. Recording auto-stops after 2 minutes. Nothing is submitted until you click Add Comment.</li>
-      <li>Use Prev/Next under the video to step through comments — the full comment text (no character limit) is shown directly below the video.</li>
-      <li>Timestamps are shown and stored as <b>mm:ss.s</b> everywhere for video position.</li>
-    </ul>
-    <h3 style="color:var(--sn-navy);">⚠️ Notes on live sync</h3>
-    <ul>
-      <li>Browsers cannot read your computer's actual username for privacy reasons — that's why you're asked to type your name once at setup.</li>
-      <li>Live sync only works in <b>Chrome or Edge</b>, via "Import Spreadsheet" (local file, not a URL — browsers cannot write to a shared link without a sign-in-based API, which this tool intentionally avoids to stay 100% client-side).</li>
-      <li>If your browser asks you to re-confirm file access, a red banner will appear with a "Click to Resume Live Sync" button — click it once and syncing continues automatically.</li>
-      <li>Conflict rule: same field, same row, edited by two people — the edit with the latest timestamp is kept automatically.</li>
-      <li><b>Important:</b> this live sync works reliably between browser tabs/sessions sharing the same local file. True real-time sync between two completely different computers depends on how quickly your file-sync service (e.g., OneDrive) propagates the file between machines — it is not instantaneous across devices.</li>
-    </ul>
-  </div>
-</div>
+<main>
+  <section class="tab-content active" id="tab-home">
+    <div class="card">
+      <h2 style="margin-top:0;">👋 Welcome</h2>
+      <p class="small-note" style="font-size:13.5px; color:var(--text);">This tool helps Reviewers and NIIT Developers collaborate on training-video QA using a local Excel file as the shared data store — no backend server required.</p>
+      <ul style="font-size:13.5px; line-height:1.9;">
+        <li>📂 <strong>Reviewers</strong> log timestamped comments (text or 🎤 voice) while watching a video, then mark issues "Approved" once fixes are verified.</li>
+        <li>🛠️ <strong>Developers</strong> view comments read-only, mark items "Fixed by NIIT", and add follow-up notes.</li>
+        <li>🔒 <strong>Video Locking</strong>: a video locks automatically for the Reviewer the moment they log their <em>first comment</em> on it — Developers cannot edit any row on that video until the Reviewer clicks "Review Complete – Stamp & Sync", which releases the lock. The same applies in reverse for Developers marking "Fixed by NIIT". Locks also auto-expire after ~90s of inactivity as a safety net for crashed/abandoned sessions.</li>
+        <li>🕑 <strong>Activity Log</strong>: every action is timestamped and visible in Review Validations.</li>
+        <li>🔄 <strong>Live Sync</strong> (Chrome/Edge only): re-reads the file every 2s and writes every 3s (plus immediately after any action you take), merging only the rows/locks that changed.</li>
+        <li>⚠️ Live sync only works between sessions sharing the exact same local file handle.</li>
+        <li>🔍 Reviewers can run an Auto-Scan that OCRs frame corners across the video looking for URLs.</li>
+        <li>Browsers cannot read your system username, so please enter your name at setup.</li>
+      </ul>
+    </div>
+  </section>
 
-<div class="view" id="view-dashboard">
-  <div class="subtabs">
-    <button data-sub="reviewer" class="active">Reviewer View</button>
-    <button data-sub="developer">Developer View</button>
-    <button data-sub="overview">Overview</button>
-  </div>
-  <div class="subview active" id="sub-reviewer">
-    <p class="note">Videos ready for your review (signed-off videos are hidden here).</p>
-    <div id="reviewerDashContent"></div>
-  </div>
-  <div class="subview" id="sub-developer">
-    <p class="note">Videos with open issues (signed-off videos are hidden here).</p>
-    <div id="developerDashContent"></div>
-  </div>
-  <div class="subview" id="sub-overview">
-    <div class="statbar" id="overviewStatBar"></div>
-    <div class="filterbar">
-      <div><label class="note"><b>Filter by Application</b></label><div class="multiselect-box" id="msAppFilter"></div></div>
-      <div><label class="note"><b>Filter by Status</b></label>
-        <div class="multiselect-box" id="msStatusFilter">
-          <label><input type="checkbox" value="readyDeveloper" checked> Ready for Developer</label>
-          <label><input type="checkbox" value="readyReviewer" checked> Ready for Reviewer</label>
-          <label><input type="checkbox" value="signedoff" checked> Signed Off</label>
-          <label><input type="checkbox" value="no-comments" checked> No comments yet</label>
+  <section class="tab-content" id="tab-dashboard">
+    <div class="subtab-row">
+      <button class="active" data-subtab="reviewerView">Reviewer View</button>
+      <button data-subtab="developerView">Developer View</button>
+      <button data-subtab="overview">Overview</button>
+    </div>
+    <div id="dash-reviewerView" class="dash-sub"></div>
+    <div id="dash-developerView" class="dash-sub hidden"></div>
+    <div id="dash-overview" class="dash-sub hidden"></div>
+  </section>
+
+  <section class="tab-content" id="tab-newreview">
+    <div id="nr-devNote" class="card hidden">🛠️ This tab is Reviewer-only for adding comments. You can browse videos and view existing comments in Review Validations.</div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div><label>Application</label><select id="nr-appFilter"></select></div>
+        <div><label>Video</label><select id="nr-videoFilter"></select></div>
+        <div style="flex:0;"><button class="btn secondary" id="nr-browseBtn">📂 Browse Video File</button></div>
+      </div>
+      <div class="detected-info" id="nr-detectedInfo">
+        ✅ Detected — <strong>Application:</strong>&nbsp;<span id="nr-detectedApp">—</span>&nbsp;&nbsp;
+        <strong>Video Name:</strong>&nbsp;<span id="nr-detectedVideo">—</span>
+      </div>
+    </div>
+
+    <div id="nr-lockBanner" class="lock-banner hidden" style="margin:0 0 16px;"></div>
+
+    <div class="workspace">
+      <div class="workspace-left">
+        <div class="card">
+          <video id="nr-video" controls></video>
+          <div class="flex-row" style="margin-top:12px;">
+            <button class="btn secondary" id="nr-prevBtn">⏮ Prev Issue</button>
+            <button class="btn secondary" id="nr-nextBtn">⏭ Next Issue</button>
+            <button class="btn secondary" id="nr-quickActionBtn">Quick Action</button>
+            <button class="btn" id="nr-reviewCompleteBtn">✔ Review Complete – Stamp & Sync</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>💬 Current Comment</h3></div>
+          <div id="nr-currentComment" class="small-note">No comment selected. Use Prev/Next.</div>
+        </div>
+      </div>
+
+      <div class="workspace-right">
+        <div class="card" id="nr-addCommentCard">
+          <div class="card-header"><h3>➕ Add Comment</h3></div>
+          <button class="btn secondary btn-block" id="nr-autoScanBtn">🔍 Auto-Scan for URLs</button>
+          <div id="nr-scanResults"></div>
+          <div style="margin-top:14px;">
+            <label>Comment</label>
+            <textarea id="nr-commentText" placeholder="Describe the issue..."></textarea>
+          </div>
+          <div class="flex-row" style="margin-top:10px;">
+            <button class="btn secondary" id="nr-startRec">🎤 Start Recording</button>
+            <button class="btn secondary" id="nr-stopRec" disabled>⏹ Stop Recording</button>
+          </div>
+          <button class="btn btn-block" id="nr-addCommentBtn" style="margin-top:12px;">Add Comment</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>🕑 Recently Logged</h3></div>
+          <table id="nr-recentTable">
+            <thead><tr><th>Time</th><th>Shot</th><th>Comment</th><th>By</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
     </div>
-    <div id="overviewContent"></div>
-  </div>
-</div>
+  </section>
 
-<div class="view" id="view-newreview">
-  <div class="fileStatus" id="fileStatusNR">No spreadsheet loaded.</div>
-  <div class="filterbar">
-    <select id="nrFilterApp"><option value="">All Applications</option></select>
-    <select id="nrFilterVideo"><option value="">Select a Video</option></select>
-    <button class="secondary" id="nrBrowseVideo">Browse Video File</button>
-  </div>
-  <div class="vwrap">
-    <div class="vcol">
-      <video id="player_nr" controls></video>
-      <div class="navrow">
-        <button class="secondary" id="btnPrev_nr">⏮ Prev Issue</button>
-        <button class="secondary" id="btnNext_nr">Next Issue ⏭</button>
-        <span id="curTimeLabel_nr" class="note"></span>
+  <section class="tab-content" id="tab-validations">
+    <div class="card">
+      <div class="toolbar">
+        <div><label>Application</label><select id="rv-appFilter"></select></div>
+        <div><label>Video</label><select id="rv-videoFilter"></select></div>
+        <div><label>Status</label><select id="rv-statusFilter">
+          <option value="">All</option>
+          <option value="Ready for Developer">Ready for Developer</option>
+          <option value="Ready for Reviewer">Ready for Reviewer</option>
+          <option value="Signed Off">Signed Off</option>
+          <option value="No comments">No comments</option>
+        </select></div>
+        <div style="flex:0;"><button class="btn secondary" id="rv-browseBtn">📂 Browse Video File</button></div>
       </div>
-      <div class="card" style="margin-top:10px;">
-        <h3 class="section-title" style="margin-bottom:6px;">Current Comment</h3>
-        <p id="currentCommentFull_nr" class="current-comment-box">Use Prev/Next to view a comment here.</p>
+      <div id="rv-devPrompt" class="empty-state hidden">
+        <div class="icon">🛠️</div>
+        Please select an Application and Video above to view comments.
       </div>
-      <div class="card"><button id="btnReviewCompleteNR" style="width:100%;" disabled>✔ Review Complete – Stamp & Sync</button></div>
     </div>
-    <div class="ccol">
-      <div class="card" id="addCommentCardNR">
-        <button class="secondary" id="btnAutoScan_nr" style="width:100%;margin-bottom:12px;">🔍 Auto-Scan for URLs</button>
-        <h3 class="section-title">Add Comment</h3>
-        <textarea id="commentBox_nr" rows="4" style="width:100%;" placeholder="Click here to pause video & comment..."></textarea>
-        <div style="margin-top:8px;display:flex;gap:8px;">
-          <button id="btnStartRec_nr">🎤 Start Recording</button>
-          <button id="btnStopRec_nr" class="secondary" disabled>⏹ Stop Recording</button>
-        </div>
-        <div style="margin-top:8px;"><button id="btnAddComment_nr" style="width:100%;">Add Comment</button></div>
-        <div style="margin-top:6px;font-size:12px;color:var(--sn-muted);" id="pendingMeta_nr"></div>
-      </div>
-      <div class="dev-restricted-note" id="devNoteNR" style="display:none;">Developer view: you cannot add new comments here. Go to "Review Validations," select a video, mark issues "Fixed by NIIT," and add Follow-up Notes as needed.</div>
-      <div class="card" id="obsCard_nr" style="display:none;"><h3 class="section-title">Auto-Scan Observations</h3><div id="obsList_nr"></div></div>
-      <div class="card"><h3 class="section-title">Recently Logged (this video)</h3><table><tbody id="nrRecentTable"></tbody></table></div>
-    </div>
-  </div>
-</div>
 
-<div class="view" id="view-validations">
-  <div class="fileStatus" id="fileStatusRV">No spreadsheet loaded.</div>
-  <div class="filterbar">
-    <select id="rvFilterApp"><option value="">All Applications</option></select>
-    <select id="rvFilterVideo"><option value="">All Videos</option></select>
-    <select id="rvFilterStatus">
-      <option value="all">All comments</option><option value="open">Open</option>
-      <option value="fixed">Fixed (pending approval)</option><option value="approved">Approved</option>
-    </select>
-    <button class="secondary" id="rvBrowseVideo">Browse Video File</button>
-  </div>
-  <div id="rvDevPrompt" class="card" style="display:none;">
-    <p class="note">Select an <b>Application</b> and <b>Video</b> above to view and process comments for that video.</p>
-  </div>
-  <div class="vwrap" id="rvPlayerWrap">
-    <div class="vcol">
-      <video id="player_rv" controls></video>
-      <div class="navrow">
-        <button class="secondary" id="btnPrev_rv">⏮ Prev Issue</button>
-        <button class="secondary" id="btnNext_rv">Next Issue ⏭</button>
-        <button id="btnQuickAction_rv">Approve Fix</button>
-        <span class="currentIssue" id="currentIssueLabel_rv"></span>
-      </div>
-      <div class="card" style="margin-top:10px;">
-        <h3 class="section-title" style="margin-bottom:6px;">Current Comment</h3>
-        <p id="currentCommentFull_rv" class="current-comment-box">Use Prev/Next to view a comment here.</p>
-      </div>
-      <div class="card"><button id="btnReviewCompleteRV" style="width:100%;" disabled>✔ Review Complete – Stamp & Sync</button></div>
-    </div>
-    <div class="ccol">
-      <div class="card" id="addCommentCardRV">
-        <button class="secondary" id="btnAutoScan_rv" style="width:100%;margin-bottom:12px;">🔍 Auto-Scan for URLs</button>
-        <h3 class="section-title">Add Comment</h3>
-        <textarea id="commentBox_rv" rows="4" style="width:100%;" placeholder="Click here to pause video & comment..."></textarea>
-        <div style="margin-top:8px;display:flex;gap:8px;">
-          <button id="btnStartRec_rv">🎤 Start Recording</button>
-          <button id="btnStopRec_rv" class="secondary" disabled>⏹ Stop Recording</button>
+    <div id="rv-lockBanner" class="lock-banner hidden"></div>
+
+    <div class="workspace" id="rv-workspace">
+      <div class="workspace-left">
+        <div class="card" id="rv-playerWrap">
+          <video id="rv-video" controls></video>
+          <div class="flex-row" style="margin-top:12px;">
+            <button class="btn secondary" id="rv-prevBtn">⏮ Prev Issue</button>
+            <button class="btn secondary" id="rv-nextBtn">⏭ Next Issue</button>
+            <button class="btn" id="rv-quickActionBtn">Quick Action</button>
+            <button class="btn" id="rv-reviewCompleteBtn">✔ Review Complete – Stamp & Sync</button>
+          </div>
         </div>
-        <div style="margin-top:8px;"><button id="btnAddComment_rv" style="width:100%;">Add Comment</button></div>
-        <div style="margin-top:6px;font-size:12px;color:var(--sn-muted);" id="pendingMeta_rv"></div>
+        <div class="card" id="rv-currentCard">
+          <div class="card-header"><h3>💬 Current Comment</h3></div>
+          <div id="rv-currentComment" class="small-note">No comment selected. Use Prev/Next or click a timestamp.</div>
+        </div>
+        <div class="card" id="rv-activeCard">
+          <div class="card-header">
+            <h3>📋 Active Comments</h3>
+            <div><button class="btn ghost sm" id="rv-expandAll">Expand All</button> <button class="btn ghost sm" id="rv-collapseAll">Collapse All</button></div>
+          </div>
+          <div id="rv-activeGroups"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>✅ Signed-Off Videos</h3></div>
+          <table><thead><tr><th>Application</th><th>Video</th><th>Total</th><th>Approved</th><th></th></tr></thead>
+            <tbody id="rv-signedOffTable"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>🕑 Activity Log</h3><span class="hint">Most recent actions across all sessions</span></div>
+          <div id="rv-activityLog"></div>
+        </div>
       </div>
-      <div class="dev-restricted-note" id="devNoteRV" style="display:none;">Developer view: you cannot add new comments. Use the table below to mark "Fixed by NIIT" and add Follow-up Notes.</div>
-      <div class="card" id="obsCard_rv" style="display:none;"><h3 class="section-title">Auto-Scan Observations</h3><div id="obsList_rv"></div></div>
+
+      <div class="workspace-right">
+        <div class="card" id="rv-addCommentCard">
+          <div class="card-header"><h3>➕ Add Comment</h3></div>
+          <button class="btn secondary btn-block" id="rv-autoScanBtn">🔍 Auto-Scan for URLs</button>
+          <div id="rv-scanResults"></div>
+          <div style="margin-top:14px;">
+            <label>Comment</label>
+            <textarea id="rv-commentText" placeholder="Describe the issue..."></textarea>
+          </div>
+          <div class="flex-row" style="margin-top:10px;">
+            <button class="btn secondary" id="rv-startRec">🎤 Start Recording</button>
+            <button class="btn secondary" id="rv-stopRec" disabled>⏹ Stop Recording</button>
+          </div>
+          <button class="btn btn-block" id="rv-addCommentBtn" style="margin-top:12px;">Add Comment</button>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="card" id="activeTableCard">
-    <h3 class="section-title">Active Comments</h3>
-    <div id="groupedCommentsContainer"></div>
-  </div>
-  <div class="card">
-    <h3 class="section-title">✔ Signed-Off Videos</h3>
-    <table><thead><tr><th>Application</th><th>Video</th><th>Total</th><th>Approved</th><th>Actions</th></tr></thead>
-    <tbody id="signedOffTableBody"></tbody></table>
+  </section>
+</main>
+
+<div class="modal-overlay" id="setupModal">
+  <div class="modal">
+    <h2>Get started</h2>
+    <p class="small-note">Set up your session to begin reviewing or fixing training videos.</p>
+    <div class="step-label">Step 1 · Who are you?</div>
+    <div class="role-btns">
+      <button class="btn" id="roleReviewerBtn">I'm a Reviewer</button>
+      <button class="btn secondary" id="roleDevBtn">I'm a Developer (NIIT)</button>
+    </div>
+    <div id="nameSection" class="hidden">
+      <div class="step-label">Step 2 · Your name</div>
+      <input type="text" id="userNameInput" placeholder="Your name — shown on changes you make" required>
+    </div>
+    <div id="fileSection" class="hidden">
+      <div class="step-label">Step 3 · Spreadsheet</div>
+      <div class="flex-row">
+        <button class="btn secondary" id="downloadTemplateBtn">⬇ Download Blank Template</button>
+        <button class="btn" id="importSpreadsheetBtn">📂 Import Spreadsheet</button>
+      </div>
+      <input type="file" id="fallbackFileInput" accept=".xlsx" class="hidden">
+    </div>
   </div>
 </div>
 
 <script>
-/* ============ STATE ============ */
-const sessionId = crypto.randomUUID();
-let role=null, fileHandle=null, workbook=null, comments=[], config={}, videoFiles={};
-let recognition=null, micStream=null, micPermissionGranted=false;
-let currentUserName = '';
-const DEFAULT_FPS=30;
-const COMMENT_COLUMNS=['CommentID','Application','VideoName','Timestamp','TimestampDisplay','Frame','CommentText','InputType','CreatedBy','CreatedAt','FixedByNIIT','ApprovedByReviewer','AutoDetected','FollowUpNotes','ScreenshotDataUrl','_LastModified','_LastModifiedBy','_LastModifiedAt'];
-const SESSION_COLUMNS = ['SessionId','UserName','Role','LastSeen'];
-let nrVideoKey=null, rvVideoKey=null, pendingCaptures={nr:null,rv:null}, rvCurrentCommentId=null;
-let dashSub='reviewer';
-let pendingObservations={nr:[],rv:[]};
+/* ============================= GLOBAL STATE ============================= */
+const SCHEMA = ["CommentID","Application","VideoName","Timestamp","TimestampDisplay","Frame","CommentText",
+"InputType","CreatedBy","CreatedAt","FixedByNIIT","ApprovedByReviewer","AutoDetected",
+"FollowUpNotes","ScreenshotDataUrl","_LastModified","_LastModifiedBy","_LastModifiedAt"];
+const LOCK_SCHEMA = ["Application","VideoName","LockedBy","LockedRole","LockedAt","ExpiresAt"];
+const ACTIVITY_SCHEMA = ["ActivityID","TimestampEpoch","Timestamp","User","Role","Action","Application","VideoName","Details"];
+const LOCK_TTL_MS = 90 * 1000;
 
-let expandedApps = new Set();
-let expandedVideos = new Set();
-
-let recognitionActive = {nr:false, rv:false};
-let finalTranscripts = {nr:'', rv:''};
-let recordingTimers = {nr:null, rv:null};
-let countdownIntervals = {nr:null, rv:null};
-const MAX_RECORDING_MS = 2 * 60 * 1000;
-
-/* ===== LIVE SYNC: READ every 3s, WRITE every 7s ===== */
-const READ_INTERVAL_MS = 3000;
-const WRITE_INTERVAL_MS = 7000;
-let readSyncTimer = null;
-let writeSyncTimer = null;
-let readInProgress = false;
-let writeInProgress = false;
-let userIsTyping = false;
-let lastSyncSuccess = null;
-let deletedCommentIds = new Set();
-let syncPermissionLost = false;
-let sessionHeartbeatTimer = null;
-
-let nextReadAt = 0;
-let nextWriteAt = 0;
-let countdownTickTimer = null;
-let bannerMessageUntil = 0;
-
-/* ===== 10-MINUTE SESSION PROMPT ===== */
-let sessionPromptTimer = null;
-const SESSION_PROMPT_INTERVAL_MS = 10 * 60 * 1000;
-
-/* ============ UTIL ============ */
-function uid(){return 'C'+Math.random().toString(36).slice(2,10);}
-function fmtTime(sec){
-  sec=Math.max(0,Number(sec)||0);
-  const m=Math.floor(sec/60), s=sec-m*60;
-  return `${String(m).padStart(2,'0')}:${s.toFixed(1).padStart(4,'0')}`;
-}
-function fmtReadableDateTime(iso){
-  if(!iso) return '';
-  const d = new Date(iso);
-  if(isNaN(d.getTime())) return iso;
-  return d.toLocaleString();
-}
-function parseTimeFlexible(val){
-  if(typeof val==='number') return val;
-  const str=String(val).trim(); if(!str) return 0;
-  const parts=str.split(':').map(p=>parseFloat(p));
-  if(parts.length===2) return parts[0]*60+parts[1];
-  if(parts.length===3) return parts[0]*3600+parts[1]*60+parts[2];
-  return parseFloat(str)||0;
-}
-function videoKey(app,vid){return app+'|'+vid;}
-function nowIso(){return new Date().toISOString();}
-function checkLibLoaded(){ if(typeof XLSX==='undefined'){ alert('Spreadsheet library failed to load.'); return false; } return true; }
-function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').classList.add('active'); }
-window.openLightbox=openLightbox;
-function parseAppFromVideoName(nameNoExt){
-  const match=nameNoExt.match(/video/i); if(!match) return null;
-  const idx=match.index;
-  let app=nameNoExt.slice(0,idx).replace(/[_\-\s]+$/,'').trim();
-  let vid=nameNoExt.slice(idx).replace(/^[_\-\s]+/,'').trim()||nameNoExt;
-  return {app:app||'UnknownApp', vid};
-}
-function touchComment(c){
-  c._LastModified = Date.now();
-  c._LastModifiedBy = currentUserName || role || 'Unknown';
-  c._LastModifiedAt = nowIso();
-}
-
-document.addEventListener('focusin', (e)=>{
-  if(e.target.matches('textarea, input[type=text]')) userIsTyping = true;
-});
-document.addEventListener('focusout', (e)=>{
-  if(e.target.matches('textarea, input[type=text]')) userIsTyping = false;
-});
-
-/* ============ FILE STATUS + SYNC BANNER ============ */
-function fileStatusText(){
-  if(!workbook) return 'No spreadsheet loaded.';
-  if(fileHandle) return `📄 ${fileHandle.name}`;
-  return '📄 Loaded (unsaved — live sync unavailable in this mode)';
-}
-function refreshFileStatus(){
-  const txt = fileStatusText();
-  document.getElementById('fileStatusNR').textContent = txt;
-  document.getElementById('fileStatusRV').textContent = txt;
-  document.getElementById('headerFileStatus').textContent = workbook ? txt : '';
-  document.getElementById('btnChangeFile').style.display = workbook ? 'inline-block' : 'none';
-  document.getElementById('btnReviewCompleteNR').disabled = !workbook || role!=='Reviewer';
-  document.getElementById('btnReviewCompleteRV').disabled = !workbook || role!=='Reviewer';
-  document.getElementById('btnEndSession').disabled = !workbook || !fileHandle;
-
-  const banner = document.getElementById('syncBanner');
-  if(workbook && fileHandle) banner.classList.add('show');
-  else banner.classList.remove('show');
-}
-
-function showBannerMessage(msg, color){
-  const el = document.getElementById('syncBannerText');
-  const dot = document.getElementById('syncDot');
-  el.innerHTML = `<span class="sync-msg">${msg}</span>`;
-  dot.style.background = color || '#16A34A';
-  bannerMessageUntil = Date.now() + 2000;
-}
-function showBannerError(msg){
-  const el = document.getElementById('syncBannerText');
-  const dot = document.getElementById('syncDot');
-  el.innerHTML = `<span class="sync-msg" style="color:#DC2626;">⚠️ ${msg}</span>`;
-  dot.style.background = '#DC2626';
-  bannerMessageUntil = Date.now() + 3000;
-}
-function setBannerIdleLabel(){
-  const el = document.getElementById('syncBannerText');
-  el.textContent = fileHandle ? 'Live sync active' : 'Live sync unavailable in this mode';
-}
-function startCountdownTicker(){
-  if(countdownTickTimer) clearInterval(countdownTickTimer);
-  countdownTickTimer = setInterval(()=>{
-    const now = Date.now();
-    if(now < bannerMessageUntil) return;
-    setBannerIdleLabel();
-    const readSecs = Math.max(0, Math.ceil((nextReadAt - now)/1000));
-    const writeSecs = Math.max(0, Math.ceil((nextWriteAt - now)/1000));
-    document.getElementById('readCountdown').textContent = fileHandle ? `${readSecs}s` : '—';
-    document.getElementById('writeCountdown').textContent = fileHandle ? `${writeSecs}s` : '—';
-  }, 250);
-}
-
-/* ============ SETUP MODAL ============ */
-document.getElementById('btnReviewer').onclick=()=>chooseRole('Reviewer');
-document.getElementById('btnDeveloper').onclick=()=>chooseRole('Developer');
-
-function chooseRole(r){
-  role=r;
-  document.getElementById('roleLabel').textContent='Role: '+r;
-  document.getElementById('roleConfirmLabel').textContent=r;
-  const reviewerBtn = document.getElementById('btnReviewer');
-  const developerBtn = document.getElementById('btnDeveloper');
-  if(r === 'Reviewer'){ reviewerBtn.classList.remove('secondary'); developerBtn.classList.add('secondary'); }
-  else { developerBtn.classList.remove('secondary'); reviewerBtn.classList.add('secondary'); }
-  applyRoleUI();
-  document.getElementById('nameSection').style.display='block';
-}
-
-document.getElementById('userNameInput').addEventListener('input', (e)=>{
-  currentUserName = e.target.value.trim();
-  document.getElementById('nameConfirmLabel').textContent = currentUserName || '(not entered)';
-  document.getElementById('fileSection').style.display = currentUserName ? 'block' : 'none';
-});
-
-document.getElementById('btnDownloadTemplate').onclick=downloadTemplate;
-document.getElementById('btnImportSpreadsheet').onclick=async()=>{
-  if(!currentUserName){ alert('Please enter your name before continuing.'); return; }
-  await openSpreadsheetFlow();
-  if(workbook) document.getElementById('setupModal').style.display='none';
+let state = {
+  role: null, userName: '', comments: [],
+  config: {ReadMeLink:'', ReviewCompletedAt:'', ReviewCompletedBy:''},
+  fileHandle: null, usingFSApi: false, deletedIds: new Set(),
+  sessionId: Math.random().toString(36).slice(2),
+  expandedGroups: new Set(), expandedVideoGroups: new Set(),
+  isTypingNow: false, currentCommentIdNR: null, currentCommentIdRV: null,
+  locks: [], activityLog: [],
+  releasedLocks: new Set(),
 };
-document.getElementById('btnChangeFile').onclick=()=>{ document.getElementById('setupModal').style.display='flex'; };
-function downloadTemplate(){
-  if(!checkLibLoaded()) return;
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([COMMENT_COLUMNS]), 'Comments');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['ReadMeLink','']]), 'Config');
-  const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-  const blob=new Blob([out],{type:'application/octet-stream'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='video-review-template.xlsx'; a.click();
-}
 
-/* ============ ROLE-GATED UI ============ */
-function applyRoleUI(){
-  const isDev=role==='Developer';
-  document.getElementById('addCommentCardNR').style.display=isDev?'none':'block';
-  document.getElementById('devNoteNR').style.display=isDev?'block':'none';
-  document.getElementById('addCommentCardRV').style.display=isDev?'none':'block';
-  document.getElementById('devNoteRV').style.display=isDev?'block':'none';
-  document.getElementById('btnQuickAction_rv').textContent=isDev?'Mark Fixed by NIIT':'Approve Fix';
-  dashSub=isDev?'developer':'reviewer';
-  document.querySelectorAll('.subtabs button').forEach(b=>b.classList.toggle('active', b.dataset.sub===dashSub));
-  document.querySelectorAll('.subview').forEach(v=>v.classList.toggle('active', v.id==='sub-'+dashSub));
-  renderCommentsTable();
-}
+function uid(){ return 'c_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function touchComment(row){ row._LastModified = Date.now(); row._LastModifiedBy = state.userName; row._LastModifiedAt = new Date().toISOString(); }
 
-/* ============ TABS ============ */
-document.querySelectorAll('.tabs > button').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tabs > button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab==='dashboard') renderDashboard();
-    if(btn.dataset.tab==='validations') resetValidationsToAll();
+/* ============================= ACTIVITY LOG ============================= */
+function logActivity(action, app, video, details){
+  const entry = {
+    ActivityID: uid(), TimestampEpoch: Date.now(), Timestamp: new Date().toISOString(),
+    User: state.userName, Role: state.role, Action: action,
+    Application: app||'', VideoName: video||'', Details: details||''
   };
-});
-document.querySelectorAll('.subtabs button').forEach(btn=>{
-  btn.onclick=()=>{
-    dashSub=btn.dataset.sub;
-    document.querySelectorAll('.subtabs button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
-    document.getElementById('sub-'+dashSub).classList.add('active');
-    renderDashboard();
-  };
-});
-function resetValidationsToAll(){
-  document.getElementById('rvFilterApp').value='';
-  refreshVideoFilter('rv');
-  document.getElementById('rvFilterVideo').value='';
-  rvVideoKey=null; rvCurrentCommentId=null;
-  loadVideoInto('rv', null);
-  renderCommentsTable();
+  state.activityLog.unshift(entry);
+  if(state.activityLog.length > 300) state.activityLog.length = 300;
+}
+function timeAgo(epoch){
+  const diff = Math.max(0, Date.now() - epoch);
+  const s = Math.floor(diff/1000);
+  if(s < 60) return s + 's ago';
+  const m = Math.floor(s/60); if(m < 60) return m + 'm ago';
+  const h = Math.floor(m/60); if(h < 24) return h + 'h ago';
+  const d = Math.floor(h/24); return d + 'd ago';
+}
+function activityIcon(action){
+  if(action.includes('Lock')) return '🔒';
+  if(action.includes('Fixed')) return '🛠️';
+  if(action.includes('Approved')) return '✅';
+  if(action.includes('Deleted')) return '🗑️';
+  if(action.includes('Added')) return '➕';
+  if(action.includes('Edited')) return '✏️';
+  if(action.includes('Rollback')) return '↩️';
+  if(action.includes('Review Complete')) return '🏁';
+  return '•';
 }
 
-/* ============ SPREADSHEET OPEN / SAVE ============ */
-async function openSpreadsheetFlow(){
-  if(!checkLibLoaded()) return;
-  try{
-    let file;
-    if(window.showOpenFilePicker){
-      let handles;
-      try{ handles=await window.showOpenFilePicker({types:[{description:'Excel', accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]}); }
-      catch(e){ return; }
-      fileHandle=handles[0]; file=await fileHandle.getFile();
-    } else {
-      file=await new Promise(resolve=>{
-        const input=document.createElement('input'); input.type='file'; input.accept='.xlsx';
-        input.onchange=()=>resolve(input.files[0]); input.click();
-      });
-      fileHandle=null; if(!file) return;
-    }
-    await loadWorkbookFromFile(file);
-    checkAndSetLock();
-    startLiveSync();
-    startSessionPromptTimer();
-    refreshFileStatus();
-    const appCount=[...new Set(comments.map(c=>c.Application).filter(Boolean))].length;
-    alert(`Spreadsheet loaded successfully.\n\nApplications: ${appCount}\nComments: ${comments.length}\n\n${fileHandle ? 'Live sync is now active — reading every 3s, writing every 7s.' : 'Note: live sync unavailable in this mode.'}`);
-  }catch(e){ console.error(e); alert('Could not read the spreadsheet.\n\n'+(e.message||e)); }
-}
-async function loadWorkbookFromFile(file){
-  const buf=await file.arrayBuffer();
-  workbook=XLSX.read(buf,{type:'array', cellDates:true});
-  loadCommentsSheet(); loadConfigSheet(); refreshFilters(); renderDashboard();
-}
-function normalizeCommentRow(c){
-  if(c.FollowUpNotes===undefined) c.FollowUpNotes='';
-  if(c.ScreenshotDataUrl===undefined) c.ScreenshotDataUrl='';
-  if((!c.Application||String(c.Application).trim()==='') && c.VideoName){
-    const p=parseAppFromVideoName(String(c.VideoName)); c.Application=p?p.app:'UnknownApp';
-  }
-  if(c.Timestamp===undefined||c.Timestamp===''||isNaN(Number(c.Timestamp))) c.Timestamp=c.TimestampDisplay?parseTimeFlexible(c.TimestampDisplay):0;
-  else c.Timestamp=Number(c.Timestamp)||0;
-  c.TimestampDisplay=fmtTime(c.Timestamp);
-  c._LastModified = (c._LastModified===undefined || c._LastModified==='' || isNaN(Number(c._LastModified))) ? 0 : Number(c._LastModified);
-  if(c._LastModifiedBy===undefined) c._LastModifiedBy='';
-  if(c._LastModifiedAt===undefined) c._LastModifiedAt='';
-  return c;
-}
-function loadCommentsSheet(){
-  let ws=workbook.Sheets['Comments'];
-  if(!ws){ ws=XLSX.utils.aoa_to_sheet([COMMENT_COLUMNS]); workbook.SheetNames.push('Comments'); workbook.Sheets['Comments']=ws; comments=[]; return; }
-  comments=XLSX.utils.sheet_to_json(ws,{defval:''});
-  comments.forEach(normalizeCommentRow);
-}
-function loadConfigSheet(){
-  config={};
-  const ws=workbook.Sheets['Config'];
-  if(ws) XLSX.utils.sheet_to_json(ws,{header:1}).forEach(r=>{ if(r[0]) config[r[0]]=r[1]; });
-}
-function writeCommentsBack(){
-  comments.forEach(c=>{ c.TimestampDisplay=fmtTime(c.Timestamp); if(c._LastModified===undefined) c._LastModified=0; });
-  const ws=XLSX.utils.json_to_sheet(comments,{header:COMMENT_COLUMNS});
-  workbook.Sheets['Comments']=ws;
-  if(!workbook.SheetNames.includes('Comments')) workbook.SheetNames.push('Comments');
-}
-async function saveWorkbook(){
-  if(!workbook) return;
-  writeCommentsBack(); writeLockSheet();
-  const out=XLSX.write(workbook,{bookType:'xlsx',type:'array'});
-  if(fileHandle){
-    const w=await fileHandle.createWritable();
-    await w.write(out);
-    await w.close();
-  } else {
-    const blob=new Blob([out],{type:'application/octet-stream'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tracker.xlsx'; a.click();
-  }
-}
-async function reviewCompleteFlow(){
-  if(!workbook){ alert('Load a spreadsheet first.'); return; }
-  if(!confirm('Mark review complete and stamp this in the spreadsheet now?')) return;
-  config.ReviewCompletedAt=nowIso(); config.ReviewCompletedBy=currentUserName||role;
-  workbook.Sheets['Config']=XLSX.utils.aoa_to_sheet(Object.entries(config));
-  if(!workbook.SheetNames.includes('Config')) workbook.SheetNames.push('Config');
-  try{
-    await saveWorkbook();
-    lastSyncSuccess = Date.now();
-    showBannerMessage('✅ Review completion saved');
-  }catch(e){
-    showBannerError('Save failed — ' + e.message);
-  }
-  stopMicNow();
-  alert('Review completion stamped and synced.');
-}
-document.getElementById('btnReviewCompleteNR').onclick=reviewCompleteFlow;
-document.getElementById('btnReviewCompleteRV').onclick=reviewCompleteFlow;
-function writeLockSheet(){
-  workbook.Sheets['_Lock']=XLSX.utils.aoa_to_sheet([['SessionId',sessionId],['LockedBy',currentUserName||role||'Unknown'],['Timestamp',nowIso()]]);
-  if(!workbook.SheetNames.includes('_Lock')) workbook.SheetNames.push('_Lock');
-}
-function checkAndSetLock(){
-  try{
-    const ws=workbook.Sheets['_Lock'];
-    if(ws){
-      const map={}; XLSX.utils.sheet_to_json(ws,{header:1}).forEach(r=>map[r[0]]=r[1]);
-      const age=(Date.now()-new Date(map.Timestamp||0).getTime())/60000;
-      if(map.SessionId && map.SessionId!==sessionId && age<10){
-        const bar=document.getElementById('lockBar'); bar.style.display='block';
-        bar.textContent=`Note: file may also be open with "${map.LockedBy}" (${age.toFixed(1)} min ago). Live sync will merge both of your changes automatically.`;
-      }
-    }
-  }catch(e){}
-}
-
-/* ============ ACTIVE SESSIONS TRACKING ============ */
-function writeActiveSession(){
-  if(!workbook) return;
-  let ws = workbook.Sheets['ActiveSessions'];
-  let rows = ws ? XLSX.utils.sheet_to_json(ws, {defval:''}) : [];
+/* ============================= LOCKING ============================= */
+function getActiveLock(app, video){
+  if(!app || !video) return null;
   const now = Date.now();
-  rows = rows.filter(r => r.SessionId !== sessionId && (now - Number(r.LastSeen||0)) < 30000);
-  rows.push({SessionId: sessionId, UserName: currentUserName, Role: role, LastSeen: now});
-  workbook.Sheets['ActiveSessions'] = XLSX.utils.json_to_sheet(rows, {header: SESSION_COLUMNS});
-  if(!workbook.SheetNames.includes('ActiveSessions')) workbook.SheetNames.push('ActiveSessions');
+  return state.locks.find(l=>l.Application===app && l.VideoName===video && l.ExpiresAt > now) || null;
 }
-function removeActiveSession(){
-  if(!workbook) return;
-  let ws = workbook.Sheets['ActiveSessions'];
-  if(!ws) return;
-  let rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-  rows = rows.filter(r => r.SessionId !== sessionId);
-  workbook.Sheets['ActiveSessions'] = XLSX.utils.json_to_sheet(rows, {header: SESSION_COLUMNS});
+function isLockedByOtherRole(app, video){
+  const lock = getActiveLock(app, video);
+  if(lock && lock.LockedRole !== state.role) return lock;
+  return null;
 }
-
-/* ============ LIVE SYNC ============ */
-function startLiveSync(){
-  if(readSyncTimer) clearTimeout(readSyncTimer);
-  if(writeSyncTimer) clearTimeout(writeSyncTimer);
-  startCountdownTicker();
-  scheduleNextRead();
-  scheduleNextWrite();
-
-  writeActiveSession();
-  if(sessionHeartbeatTimer) clearInterval(sessionHeartbeatTimer);
-  sessionHeartbeatTimer = setInterval(writeActiveSession, 10000);
-
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible' && fileHandle && !syncPermissionLost) doReadMergeCycle();
-  });
-  window.addEventListener('focus', ()=>{
-    if(fileHandle && !syncPermissionLost) doReadMergeCycle();
-  });
-}
-
-function scheduleNextRead(){
-  nextReadAt = Date.now() + READ_INTERVAL_MS;
-  readSyncTimer = setTimeout(async ()=>{
-    await doReadMergeCycle();
-    scheduleNextRead();
-  }, READ_INTERVAL_MS);
-}
-function scheduleNextWrite(){
-  nextWriteAt = Date.now() + WRITE_INTERVAL_MS;
-  writeSyncTimer = setTimeout(async ()=>{
-    await doWriteCycle();
-    scheduleNextWrite();
-  }, WRITE_INTERVAL_MS);
-}
-
-async function ensureWritePermission(){
-  if(!fileHandle || !fileHandle.queryPermission) return true;
-  try{
-    const status = await fileHandle.queryPermission({mode:'readwrite'});
-    if(status === 'granted') return true;
-    syncPermissionLost = true;
-    document.getElementById('permissionBanner').classList.add('show');
-    return false;
-  }catch(e){ console.warn('Permission check failed:', e); return true; }
-}
-
-async function doReadMergeCycle(){
-  if(!workbook || !fileHandle) return;
-  if(userIsTyping) return;
-  if(readInProgress || writeInProgress) return;
-  if(syncPermissionLost) return;
-  readInProgress = true;
-  try{
-    const file = await fileHandle.getFile();
-    const buf = await file.arrayBuffer();
-    const wbIncoming = XLSX.read(buf, {type:'array', cellDates:true});
-    const wsIncoming = wbIncoming.Sheets['Comments'];
-    if(!wsIncoming){ showBannerMessage('✅ Read successful — no Comments sheet found'); return; }
-
-    let incomingRows = XLSX.utils.sheet_to_json(wsIncoming, {defval:''});
-    incomingRows.forEach(normalizeCommentRow);
-
-    const incomingMap = {}; incomingRows.forEach(r=> incomingMap[r.CommentID] = r);
-    const localMap = {}; comments.forEach(c=> localMap[c.CommentID]=c);
-
-    let changed = false, updatesFromOthers = 0, lastUpdaterName = '';
-    const merged = [];
-
-    incomingRows.forEach(incoming=>{
-      const id = incoming.CommentID;
-      if(deletedCommentIds.has(id)){ changed = true; return; }
-      const local = localMap[id];
-      if(!local){
-        merged.push(incoming); changed = true; updatesFromOthers++;
-        lastUpdaterName = incoming._LastModifiedBy || lastUpdaterName;
-        return;
-      }
-      const incomingMod = incoming._LastModified || 0;
-      const localMod = local._LastModified || 0;
-      if(incomingMod > localMod){
-        merged.push(incoming); changed = true; updatesFromOthers++;
-        lastUpdaterName = incoming._LastModifiedBy || lastUpdaterName;
-      } else {
-        merged.push(local);
-      }
-    });
-    comments.forEach(local=>{
-      if(!incomingMap[local.CommentID] && !deletedCommentIds.has(local.CommentID)) merged.push(local);
-    });
-    [...deletedCommentIds].forEach(id=>{ if(!incomingMap[id]) deletedCommentIds.delete(id); });
-
-    if(changed){
-      comments = merged;
-      refreshFilters(); renderDashboard(); renderCommentsTable(); renderNrRecentTable();
-      showBannerMessage(`✅ Read successful — synced ${updatesFromOthers} update(s)${lastUpdaterName ? ' from ' + lastUpdaterName : ''}`);
-    } else {
-      showBannerMessage('✅ Read successful — no changes');
-    }
-  }catch(e){
-    console.warn('Read-sync failed:', e);
-    showBannerError('Read failed — ' + e.message);
-  }finally{
-    readInProgress = false;
+function tryAcquireLockForAction(app, video){
+  if(!app || !video) return;
+  const key = app+'||'+video;
+  state.releasedLocks.delete(key);
+  const now = Date.now();
+  let lock = state.locks.find(l=>l.Application===app && l.VideoName===video);
+  if(!lock){
+    lock = {Application:app, VideoName:video, LockedBy:state.userName, LockedRole:state.role, LockedAt:new Date().toISOString(), ExpiresAt: now+LOCK_TTL_MS};
+    state.locks.push(lock);
+    logActivity('Lock Acquired', app, video, `${state.userName} (${state.role}) started ${state.role==='Reviewer'?'reviewing':'fixing'} this video`);
+  } else if(lock.LockedBy===state.userName && lock.LockedRole===state.role){
+    lock.ExpiresAt = now + LOCK_TTL_MS;
+  } else if(lock.ExpiresAt <= now){
+    lock.LockedBy = state.userName; lock.LockedRole = state.role; lock.LockedAt = new Date().toISOString(); lock.ExpiresAt = now+LOCK_TTL_MS;
+    logActivity('Lock Acquired', app, video, `${state.userName} (${state.role}) took over an expired lock`);
   }
 }
-
-async function doWriteCycle(){
-  if(!workbook) return;
-  if(userIsTyping) return;
-  if(!fileHandle) return;
-  if(writeInProgress || readInProgress) return;
-  if(syncPermissionLost) return;
-  writeInProgress = true;
-  try{
-    const hasPermission = await ensureWritePermission();
-    if(!hasPermission){
-      showBannerError('Permission needs to be reconfirmed — click "Resume Live Sync" above');
+function releaseLock(app, video){
+  if(!app || !video) return;
+  const idx = state.locks.findIndex(l=>l.Application===app && l.VideoName===video && l.LockedBy===state.userName && l.LockedRole===state.role);
+  if(idx > -1){
+    state.locks.splice(idx,1);
+    state.releasedLocks.add(app+'||'+video);
+    logActivity('Lock Released', app, video, `${state.userName} (${state.role}) completed review/fix and released the lock`);
+  }
+}
+function renewAllMyLocks(){
+  const now = Date.now();
+  state.locks.forEach(l=>{
+    if(l.LockedBy===state.userName && l.LockedRole===state.role){
+      l.ExpiresAt = now + LOCK_TTL_MS;
+    }
+  });
+}
+function mergeLocks(diskLocks){
+  const now = Date.now();
+  const resultMap = new Map();
+  diskLocks.forEach(dl=>{
+    if(!dl.Application || !(dl.ExpiresAt > now)) return;
+    const key = dl.Application+'||'+dl.VideoName;
+    if(state.releasedLocks.has(key) && dl.LockedBy===state.userName && dl.LockedRole===state.role){
       return;
     }
-    await saveWorkbook();
-    lastSyncSuccess = Date.now();
-    showBannerMessage('✅ Write successful');
-  }catch(e){
-    console.warn('Write-sync failed:', e);
-    if(e.name === 'NotAllowedError'){
-      syncPermissionLost = true;
-      document.getElementById('permissionBanner').classList.add('show');
-      showBannerError('Permission lost — click "Resume Live Sync" above');
-    } else {
-      showBannerError('Write failed — ' + e.message);
+    resultMap.set(key, dl);
+  });
+  state.locks.forEach(l=>{
+    if(l.LockedBy===state.userName && l.LockedRole===state.role && l.ExpiresAt > now){
+      const key = l.Application+'||'+l.VideoName;
+      if(!state.releasedLocks.has(key)){
+        resultMap.set(key, l);
+      }
     }
-  }finally{
-    writeInProgress = false;
-  }
+  });
+  state.locks = [...resultMap.values()];
+}
+function lockBadgeHtml(app, video){
+  const lock = getActiveLock(app, video);
+  if(!lock) return '';
+  const mine = lock.LockedBy===state.userName && lock.LockedRole===state.role;
+  return `<span class="badge lock">🔒 ${mine? 'You' : lock.LockedBy} (${lock.LockedRole})</span>`;
 }
 
-document.getElementById('btnResumeSync').onclick = async ()=>{
-  if(!fileHandle) return;
-  try{
-    const status = await fileHandle.requestPermission({mode:'readwrite'});
-    if(status === 'granted'){
-      syncPermissionLost = false;
-      document.getElementById('permissionBanner').classList.remove('show');
-      await doWriteCycle();
-    } else {
-      alert('Permission was not granted. Live sync will remain paused until you allow write access.');
-    }
-  }catch(e){
-    alert('Could not reconfirm permission.\n\n'+(e.message||e));
-  }
+/* ============================= APP NAME PARSING ============================= */
+function parseAppAndVideo(filenameOrName){
+  const idx = filenameOrName.toLowerCase().indexOf('video');
+  if(idx === -1) return null;
+  let app = filenameOrName.slice(0, idx).replace(/[_\-\s]+$/,'').trim();
+  let vid = filenameOrName.slice(idx).trim();
+  return {app, vid};
+}
+
+/* ============================= TIMESTAMP HANDLING ============================= */
+function secondsToDisplay(sec){
+  sec = Math.max(0, sec||0);
+  const m = Math.floor(sec/60);
+  const s = (sec - m*60).toFixed(1);
+  return `${String(m).padStart(2,'0')}:${s.padStart(4,'0')}`;
+}
+function parseFlexibleTimestamp(text){
+  if(typeof text === 'number') return text;
+  if(!text) return 0;
+  text = String(text).trim();
+  if(/^\d+(\.\d+)?$/.test(text)) return parseFloat(text);
+  const parts = text.split(':').map(p=>parseFloat(p));
+  if(parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if(parts.length === 2) return parts[0]*60 + parts[1];
+  return 0;
+}
+
+/* ============================= SETUP MODAL ============================= */
+const setupModal = document.getElementById('setupModal');
+const roleReviewerBtn = document.getElementById('roleReviewerBtn');
+const roleDevBtn = document.getElementById('roleDevBtn');
+const nameSection = document.getElementById('nameSection');
+const fileSection = document.getElementById('fileSection');
+const userNameInput = document.getElementById('userNameInput');
+
+function selectRole(role){
+  state.role = role;
+  if(role === 'Reviewer'){ roleReviewerBtn.classList.remove('secondary'); roleDevBtn.classList.add('secondary'); }
+  else { roleDevBtn.classList.remove('secondary'); roleReviewerBtn.classList.add('secondary'); }
+  nameSection.classList.remove('hidden');
+}
+roleReviewerBtn.onclick = ()=>selectRole('Reviewer');
+roleDevBtn.onclick = ()=>selectRole('Developer');
+userNameInput.addEventListener('input', ()=>{
+  state.userName = userNameInput.value.trim();
+  fileSection.classList.toggle('hidden', !state.userName);
+});
+
+document.getElementById('downloadTemplateBtn').onclick = ()=>{
+  const wb = buildWorkbook([], {}, [], []);
+  XLSX.writeFile(wb, 'VideoReviewTemplate.xlsx');
 };
 
-/* ============ END SESSION (manual button) ============ */
-document.getElementById('btnEndSession').onclick = async () => {
-  if(!workbook || !fileHandle){ alert('No active session to end.'); return; }
-  const confirmed = confirm(
-    'Ending your session will:\n\n' +
-    '• Pull in any last-minute changes from other active sessions\n' +
-    '• Merge them with your changes (most recent edit per field wins)\n' +
-    '• Save the final merged result to the spreadsheet\n' +
-    '• Remove you from the active sessions list\n\n' +
-    'Continue?'
-  );
-  if(!confirmed) return;
-  await endSessionCleanly();
-};
+function buildWorkbook(comments, config, locks, activityLog){
+  const wb = XLSX.utils.book_new();
 
-async function endSessionCleanly(){
-  try{
-    showBannerMessage('🔄 Finalizing — merging any last changes...');
-    await doReadMergeCycle();
-    await doWriteCycle();
+  const wsComments = XLSX.utils.json_to_sheet([], {header: SCHEMA});
+  XLSX.utils.sheet_add_aoa(wsComments, [SCHEMA], {origin:'A1'});
+  if(comments.length) XLSX.utils.sheet_add_json(wsComments, comments, {header:SCHEMA, skipHeader:true, origin:'A2'});
+  XLSX.utils.book_append_sheet(wb, wsComments, 'Comments');
 
-    removeActiveSession();
-    await saveWorkbook();
+  const configRows = Object.entries(config||{}).map(([k,v])=>({Key:k, Value:v}));
+  const wsConfig = XLSX.utils.json_to_sheet(configRows.length?configRows:[{Key:'ReadMeLink',Value:''}]);
+  XLSX.utils.book_append_sheet(wb, wsConfig, 'Config');
 
-    if(readSyncTimer) clearTimeout(readSyncTimer);
-    if(writeSyncTimer) clearTimeout(writeSyncTimer);
-    if(sessionHeartbeatTimer) clearInterval(sessionHeartbeatTimer);
-    if(sessionPromptTimer) clearTimeout(sessionPromptTimer);
-    if(countdownTickTimer) clearInterval(countdownTickTimer);
+  const wsLocks = XLSX.utils.json_to_sheet([], {header: LOCK_SCHEMA});
+  XLSX.utils.sheet_add_aoa(wsLocks, [LOCK_SCHEMA], {origin:'A1'});
+  if(locks && locks.length) XLSX.utils.sheet_add_json(wsLocks, locks, {header:LOCK_SCHEMA, skipHeader:true, origin:'A2'});
+  XLSX.utils.book_append_sheet(wb, wsLocks, 'Locks');
 
-    showBannerMessage('✅ Session ended — file saved and ready for next use');
-    setTimeout(() => {
-      alert('Your session has ended. All changes have been saved and merged. You can safely close this tab.');
-    }, 500);
-  }catch(e){
-    alert('Could not cleanly end the session.\n\nTechnical detail: ' + (e.message || e));
-  }
+  const wsActivity = XLSX.utils.json_to_sheet([], {header: ACTIVITY_SCHEMA});
+  XLSX.utils.sheet_add_aoa(wsActivity, [ACTIVITY_SCHEMA], {origin:'A1'});
+  if(activityLog && activityLog.length) XLSX.utils.sheet_add_json(wsActivity, activityLog, {header:ACTIVITY_SCHEMA, skipHeader:true, origin:'A2'});
+  XLSX.utils.book_append_sheet(wb, wsActivity, 'Activity');
+
+  return wb;
 }
 
-/* ============ 10-MINUTE SESSION CONTINUE/EXIT PROMPT ============ */
-function startSessionPromptTimer(){
-  if(sessionPromptTimer) clearTimeout(sessionPromptTimer);
-  sessionPromptTimer = setTimeout(showSessionContinuePrompt, SESSION_PROMPT_INTERVAL_MS);
-}
-
-async function showSessionContinuePrompt(){
-  const wantsToContinue = confirm(
-    `You've been using this tool for 10 minutes.\n\n` +
-    `Click OK to CONTINUE — this will merge in any changes from other active sessions and keep syncing.\n` +
-    `Click Cancel to EXIT — this will save and merge all your edits, then end your session cleanly.`
-  );
-  if(wantsToContinue){
-    showBannerMessage('🔄 Continuing — merging latest changes from all active sessions...');
-    await doReadMergeCycle();
-    await doWriteCycle();
-    showBannerMessage('✅ Merged and ready to continue');
-    startSessionPromptTimer();
+document.getElementById('importSpreadsheetBtn').onclick = async ()=>{
+  if(!state.userName){ alert('Please enter your name first.'); return; }
+  if(window.showOpenFilePicker){
+    try{
+      const [handle] = await window.showOpenFilePicker({types:[{description:'Excel', accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+      state.fileHandle = handle; state.usingFSApi = true;
+      const file = await handle.getFile();
+      await loadWorkbookFromFile(file);
+      finishImport();
+    }catch(e){ console.warn('File picker cancelled or failed', e); }
   } else {
-    await endSessionCleanly();
+    document.getElementById('fallbackFileInput').click();
   }
-}
-
-/* ============ MIC PERMISSION ============ */
-document.getElementById('btnStopMicBar').onclick=()=>{
-  ['nr','rv'].forEach(p=>{ recognitionActive[p]=false; });
-  if(recognition) recognition.stop();
-  stopMicNow();
 };
-async function ensureMicPermission(){
-  if(micPermissionGranted) return true;
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    micPermissionGranted=true; stream.getTracks().forEach(t=>t.stop());
-    return true;
-  }catch(e){ alert('Microphone permission was denied.'); return false; }
-}
-function showMicBar(){ document.getElementById('micBar').classList.add('active'); }
-function stopMicNow(){ document.getElementById('micBar').classList.remove('active'); }
+document.getElementById('fallbackFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  state.usingFSApi = false;
+  await loadWorkbookFromFile(file);
+  finishImport();
+});
 
-/* ============ SCREENSHOT ============ */
-function captureFrameThumbnail(player){
-  if(!player||!player.videoWidth) return '';
-  let width=160, quality=0.6;
-  for(let i=0;i<6;i++){
-    const h=Math.max(1, Math.round(player.videoHeight*(width/player.videoWidth)));
-    const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=h;
-    canvas.getContext('2d').drawImage(player,0,0,width,h);
-    const dataUrl=canvas.toDataURL('image/jpeg', quality);
-    if(dataUrl.length<=30000) return dataUrl;
-    width=Math.round(width*0.8); quality=Math.max(0.3,quality-0.1);
+async function loadWorkbookFromFile(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+
+  const wsComments = wb.Sheets['Comments'];
+  let rows = wsComments ? XLSX.utils.sheet_to_json(wsComments, {defval:''}) : [];
+  rows.forEach(r=>{
+    if(!r.Application && r.VideoName){
+      const parsed = parseAppAndVideo(r.VideoName);
+      if(parsed){ r.Application = parsed.app; r.VideoName = parsed.vid; }
+    }
+    if(!r.CommentID) r.CommentID = uid();
+    r.Timestamp = parseFlexibleTimestamp(r.Timestamp || r.TimestampDisplay || 0);
+    r.TimestampDisplay = secondsToDisplay(r.Timestamp);
+    r._LastModified = r._LastModified ? Number(r._LastModified) : 0;
+  });
+  state.comments = rows;
+
+  const wsConfig = wb.Sheets['Config'];
+  const configRows = wsConfig ? XLSX.utils.sheet_to_json(wsConfig, {defval:''}) : [];
+  state.config = {};
+  configRows.forEach(r=>{ state.config[r.Key] = r.Value; });
+
+  const now = Date.now();
+  const wsLocks = wb.Sheets['Locks'];
+  const lockRows = wsLocks ? XLSX.utils.sheet_to_json(wsLocks, {defval:''}) : [];
+  state.locks = lockRows.map(l=>({...l, ExpiresAt: Number(l.ExpiresAt)||0})).filter(l=>l.ExpiresAt > now && l.Application);
+
+  const wsActivity = wb.Sheets['Activity'];
+  const activityRows = wsActivity ? XLSX.utils.sheet_to_json(wsActivity, {defval:''}) : [];
+  state.activityLog = activityRows.map(a=>({...a, TimestampEpoch: Number(a.TimestampEpoch)||0}))
+    .sort((a,b)=>b.TimestampEpoch - a.TimestampEpoch).slice(0,300);
+}
+
+function finishImport(){
+  setupModal.classList.add('hidden');
+  document.getElementById('headerUserInfo').style.display = 'flex';
+  document.getElementById('userAvatar').textContent = state.userName.slice(0,2).toUpperCase();
+  document.getElementById('userNameDisplay').textContent = state.userName;
+  document.getElementById('userRoleDisplay').textContent = state.role;
+  renderAll();
+  if(state.usingFSApi){
+    document.getElementById('headerSync').style.display = 'flex';
+    scheduleReadCycle();
+    scheduleWriteCycle();
   }
-  return '';
 }
 
-/* ============ VIDEO FILE ASSIGNMENT ============ */
-function browseVideoForDropdown(prefix){
-  const key=document.getElementById(prefix+'FilterVideo').value;
-  if(!key){ alert('Select a video first.'); return; }
-  const [app,vid]=key.split('|');
-  const input=document.createElement('input'); input.type='file'; input.accept='video/*';
-  input.onchange=()=>{
-    const f=input.files[0]; if(!f) return;
-    if(videoFiles[key]) URL.revokeObjectURL(videoFiles[key].url);
-    videoFiles[key]={file:f,url:URL.createObjectURL(f)};
-    refreshFilters(); renderDashboard(); loadVideoInto(prefix,key);
-  };
-  input.click();
-}
-document.getElementById('rvBrowseVideo').onclick=()=>browseVideoForDropdown('rv');
-function browseVideoDirect(prefix){
-  const input=document.createElement('input'); input.type='file'; input.accept='video/*';
-  input.onchange=()=>{
-    const f=input.files[0]; if(!f) return;
-    const nameNoExt=f.name.replace(/\.[^.]+$/,'');
-    let app,vid; const parsed=parseAppFromVideoName(nameNoExt);
-    if(parsed){ app=parsed.app; vid=parsed.vid; }
-    else { app=prompt('Enter Application name:','')||'UnknownApp'; vid=prompt('Enter Video name:',nameNoExt)||nameNoExt; }
-    const key=videoKey(app,vid);
-    if(videoFiles[key]) URL.revokeObjectURL(videoFiles[key].url);
-    videoFiles[key]={file:f,url:URL.createObjectURL(f)};
-    refreshFilters(); renderDashboard();
-    document.getElementById(prefix+'FilterApp').value=app; refreshVideoFilter(prefix);
-    document.getElementById(prefix+'FilterVideo').value=key;
-    nrVideoKey=key; loadVideoInto(prefix,key);
-  };
-  input.click();
-}
-document.getElementById('nrBrowseVideo').onclick=()=>browseVideoDirect('nr');
-
-/* ============ FILTERS ============ */
-function refreshFilters(){
-  const apps=[...new Set(comments.map(c=>c.Application).filter(Boolean).concat(Object.keys(videoFiles).map(k=>k.split('|')[0])))];
-  ['nr','rv'].forEach(prefix=>{
-    const sel=document.getElementById(prefix+'FilterApp'); const prev=sel.value;
-    sel.innerHTML='<option value="">All Applications</option>'+apps.map(a=>`<option value="${a}">${a}</option>`).join('');
-    sel.value=prev;
-    sel.onchange=()=>{ refreshVideoFilter(prefix); if(prefix==='rv'){ rvVideoKey=null; loadVideoInto('rv',null); renderCommentsTable(); } };
-    refreshVideoFilter(prefix);
+/* ============================= TAB NAVIGATION ============================= */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc=>tc.classList.remove('active'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'dashboard') renderDashboard();
+    if(btn.dataset.tab === 'newreview') renderNewReview();
+    if(btn.dataset.tab === 'validations'){ resetValidationFilters(); renderValidations(); }
   });
-  document.getElementById('nrFilterVideo').onchange=()=>{ nrVideoKey=document.getElementById('nrFilterVideo').value||null; loadVideoInto('nr',nrVideoKey); };
-  document.getElementById('rvFilterVideo').onchange=()=>{ rvVideoKey=document.getElementById('rvFilterVideo').value||null; rvCurrentCommentId=null; loadVideoInto('rv',rvVideoKey); renderCommentsTable(); };
-  document.getElementById('rvFilterStatus').onchange=renderCommentsTable;
-}
-function refreshVideoFilter(prefix){
-  const app=document.getElementById(prefix+'FilterApp').value;
-  const allKeys=new Set([...comments.map(c=>videoKey(c.Application,c.VideoName)), ...Object.keys(videoFiles)]);
-  const vids=[...allKeys].filter(k=>!app||k.startsWith(app+'|'));
-  const sel=document.getElementById(prefix+'FilterVideo'); const prev=sel.value;
-  const allLabel=prefix==='rv'?'All Videos':'Select a Video';
-  sel.innerHTML=`<option value="">${allLabel}</option>`+vids.map(k=>`<option value="${k}">${k.split('|')[1]}</option>`).join('');
-  sel.value=prev;
-}
-function loadVideoInto(prefix,key){
-  const player=document.getElementById('player_'+prefix);
-  if(key&&videoFiles[key]) player.src=videoFiles[key].url; else player.removeAttribute('src');
-  if(prefix==='nr') renderNrRecentTable();
-  const fullEl = document.getElementById('currentCommentFull_'+prefix);
-  if(fullEl) fullEl.textContent = 'Use Prev/Next to view a comment here.';
-}
+});
 
-/* ============ COMMENT CAPTURE + VOICE RECORDING ============ */
-function wireCommentCapture(prefix){
-  const box = document.getElementById('commentBox_'+prefix);
-  const player = document.getElementById('player_'+prefix);
-
-  box.addEventListener('focus', ()=>{
-    if(role!=='Reviewer'||!player.src) return;
-    player.pause();
-    const ts = player.currentTime, shot = captureFrameThumbnail(player);
-    pendingCaptures[prefix] = {timestamp: ts, frame: Math.round(ts*DEFAULT_FPS), screenshot: shot};
-    document.getElementById('pendingMeta_'+prefix).innerHTML =
-      `Captured at ${fmtTime(ts)}` + (shot ? `<br><img src="${shot}" class="thumb">` : '');
+document.querySelectorAll('[data-subtab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-subtab]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.dash-sub').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('dash-'+btn.dataset.subtab).classList.remove('hidden');
   });
+});
 
-  function startRecognitionInstance(){
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = 'en-US';
-    rec.continuous = true;
-    rec.interimResults = true;
+/* ============================= STATUS LOGIC ============================= */
+function getVideoGroups(){
+  const map = {};
+  state.comments.filter(c=>!state.deletedIds.has(c.CommentID)).forEach(c=>{
+    map[c.Application] = map[c.Application] || {};
+    map[c.Application][c.VideoName] = map[c.Application][c.VideoName] || [];
+    map[c.Application][c.VideoName].push(c);
+  });
+  return map;
+}
+function computeStatus(comments){
+  if(!comments || comments.length === 0) return 'No comments';
+  const allFixed = comments.every(c=> String(c.FixedByNIIT).toLowerCase() === 'yes');
+  const allApproved = comments.every(c=> String(c.ApprovedByReviewer).toLowerCase() === 'yes');
+  if(allApproved) return 'Signed Off';
+  if(allFixed) return 'Ready for Reviewer';
+  return 'Ready for Developer';
+}
 
-    rec.onresult = (e)=>{
-      let interim = '';
-      for(let i=e.resultIndex; i<e.results.length; i++){
-        const chunk = e.results[i][0].transcript;
-        if(e.results[i].isFinal) finalTranscripts[prefix] += chunk + ' ';
-        else interim += chunk;
-      }
-      box.value = finalTranscripts[prefix] + interim;
-    };
-    rec.onerror = (e)=>{ console.warn('Speech recognition error ('+prefix+'):', e.error); };
-    rec.onend = ()=>{
-      if(recognitionActive[prefix]){
-        try{ recognition = startRecognitionInstance(); recognition.start(); }
-        catch(err){ console.warn('Auto-restart failed:', err); finishStop(prefix); }
+/* ============================= GROUPING RENDER HELPER ============================= */
+function makeGroupKey(prefix, app){ return prefix+'::'+app; }
+
+function renderGroupedList(container, listId, appMap, opts){
+  container.innerHTML = '';
+  const wrapper = document.createElement('div');
+
+  const controls = document.createElement('div');
+  controls.className = 'flex-row'; controls.style.marginBottom = '10px';
+  const expandBtn = document.createElement('button'); expandBtn.className='btn ghost sm'; expandBtn.textContent='Expand All';
+  const collapseBtn = document.createElement('button'); collapseBtn.className='btn ghost sm'; collapseBtn.textContent='Collapse All';
+  controls.appendChild(expandBtn); controls.appendChild(collapseBtn);
+  wrapper.appendChild(controls);
+
+  const apps = Object.keys(appMap).filter(a=> !opts.filterApps || opts.filterApps.size===0 || opts.filterApps.has(a)).sort();
+
+  let totalVisible = 0;
+  apps.forEach(app=>{
+    const videos = appMap[app];
+    const videoNames = Object.keys(videos);
+    let counts = {dev:0, rev:0, signed:0, none:0};
+    const visibleVideos = [];
+    videoNames.forEach(vn=>{
+      const comments = videos[vn];
+      const status = computeStatus(comments);
+      if(opts.filterStatus && opts.filterStatus.size>0 && !opts.filterStatus.has(status)) return;
+      if(opts.excludeSignedOff && status === 'Signed Off') return;
+      if(opts.onlyStatus && status !== opts.onlyStatus) return;
+      if(status === 'Ready for Developer') counts.dev++;
+      else if(status === 'Ready for Reviewer') counts.rev++;
+      else if(status === 'Signed Off') counts.signed++;
+      else counts.none++;
+      visibleVideos.push({vn, comments, status});
+    });
+    if(visibleVideos.length === 0) return;
+    totalVisible += visibleVideos.length;
+
+    const groupKey = makeGroupKey(listId, app);
+    const header = document.createElement('div');
+    header.className = 'group-header' + (state.expandedGroups.has(groupKey)?' expanded':'');
+    header.innerHTML = `<span class="chev">▶</span><strong>${app}</strong>
+      ${counts.dev?`<span class="badge dev">${counts.dev} Dev</span>`:''}
+      ${counts.rev?`<span class="badge rev">${counts.rev} Reviewer</span>`:''}
+      ${counts.signed?`<span class="badge signed">${counts.signed} Signed Off</span>`:''}
+      ${counts.none?`<span class="badge none">${counts.none} No comments</span>`:''}`;
+    const body = document.createElement('div');
+    body.className = 'group-body' + (state.expandedGroups.has(groupKey)?' open':'');
+
+    header.addEventListener('click', ()=>{
+      if(state.expandedGroups.has(groupKey)) state.expandedGroups.delete(groupKey);
+      else state.expandedGroups.add(groupKey);
+      header.classList.toggle('expanded');
+      body.classList.toggle('open');
+    });
+
+    visibleVideos.forEach(({vn,comments,status})=>{
+      if(opts.showVideoSubgroups){
+        const vKey = groupKey+'::'+vn;
+        const vHeader = document.createElement('div');
+        vHeader.className = 'video-group-header' + (state.expandedVideoGroups.has(vKey)?' expanded':'');
+        vHeader.innerHTML = `<span class="chev">▶</span><strong>${vn}</strong> <span class="small-note">(${status})</span> ${lockBadgeHtml(app, vn)}`;
+        const vBody = document.createElement('div');
+        vBody.className = 'group-body' + (state.expandedVideoGroups.has(vKey)?' open':'');
+        vBody.appendChild(opts.rowRenderer(app, vn, comments, status));
+        vHeader.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          if(state.expandedVideoGroups.has(vKey)) state.expandedVideoGroups.delete(vKey);
+          else state.expandedVideoGroups.add(vKey);
+          vHeader.classList.toggle('expanded');
+          vBody.classList.toggle('open');
+        });
+        body.appendChild(vHeader); body.appendChild(vBody);
       } else {
-        finishStop(prefix);
+        body.appendChild(opts.rowRenderer(app, vn, comments, status));
       }
-    };
-    return rec;
+    });
+
+    wrapper.appendChild(header); wrapper.appendChild(body);
+  });
+
+  if(totalVisible === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `<div class="icon">📭</div>Nothing to show here right now.`;
+    wrapper.appendChild(empty);
   }
 
-  function clearTimers(p){
-    if(recordingTimers[p]){ clearTimeout(recordingTimers[p]); recordingTimers[p]=null; }
-    if(countdownIntervals[p]){ clearInterval(countdownIntervals[p]); countdownIntervals[p]=null; }
-  }
-  function finishStop(p){
-    clearTimers(p);
-    document.getElementById('btnStartRec_'+p).disabled = false;
-    document.getElementById('btnStopRec_'+p).disabled = true;
-    stopMicNow();
-  }
-  function stopRecordingNow(p, reason){
-    recognitionActive[p] = false;
-    if(recognition){ recognition.stop(); }
-    if(reason === 'timeout'){
-      document.getElementById('micBarLabel').textContent = 'Recording stopped automatically after 2 minutes.';
-    }
-  }
-
-  document.getElementById('btnStartRec_'+prefix).onclick = async ()=>{
-    if(role!=='Reviewer') return;
-    if(!player.src){ alert('Browse/select a video first.'); return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR){ alert('Speech recognition not supported in this browser.'); return; }
-
-    player.pause();
-    const ts = player.currentTime, shot = captureFrameThumbnail(player);
-    pendingCaptures[prefix] = {timestamp: ts, frame: Math.round(ts*DEFAULT_FPS), screenshot: shot};
-    document.getElementById('pendingMeta_'+prefix).innerHTML =
-      `Captured at ${fmtTime(ts)}` + (shot ? `<br><img src="${shot}" class="thumb">` : '');
-
-    const ok = await ensureMicPermission();
-    if(!ok) return;
-
-    finalTranscripts[prefix] = box.value ? box.value + ' ' : '';
-    recognitionActive[prefix] = true;
-
-    showMicBar();
-    document.getElementById('btnStartRec_'+prefix).disabled = true;
-    document.getElementById('btnStopRec_'+prefix).disabled = false;
-
-    recognition = startRecognitionInstance();
-    recognition.start();
-
-    const startTime = Date.now();
-    document.getElementById('micBarLabel').textContent = 'Recording... speak now (auto-stops in 02:00)';
-    countdownIntervals[prefix] = setInterval(()=>{
-      const remainingMs = Math.max(0, MAX_RECORDING_MS - (Date.now()-startTime));
-      const remainingSec = Math.ceil(remainingMs/1000);
-      const mm = String(Math.floor(remainingSec/60)).padStart(2,'0');
-      const ss = String(remainingSec%60).padStart(2,'0');
-      document.getElementById('micBarLabel').textContent = `Recording... speak now (auto-stops in ${mm}:${ss})`;
-    }, 1000);
-
-    recordingTimers[prefix] = setTimeout(()=>{
-      stopRecordingNow(prefix, 'timeout');
-      document.getElementById('btnStartRec_'+prefix).disabled = false;
-      document.getElementById('btnStopRec_'+prefix).disabled = true;
-    }, MAX_RECORDING_MS);
+  expandBtn.onclick = ()=>{
+    wrapper.querySelectorAll('.group-header').forEach(h=>h.classList.add('expanded'));
+    wrapper.querySelectorAll('.group-body').forEach(b=>b.classList.add('open'));
+    apps.forEach(app=>state.expandedGroups.add(makeGroupKey(listId, app)));
+  };
+  collapseBtn.onclick = ()=>{
+    wrapper.querySelectorAll('.group-header').forEach(h=>h.classList.remove('expanded'));
+    wrapper.querySelectorAll('.group-body').forEach(b=>b.classList.remove('open'));
+    apps.forEach(app=>state.expandedGroups.delete(makeGroupKey(listId, app)));
   };
 
-  document.getElementById('btnStopRec_'+prefix).onclick = ()=>{
-    if(role!=='Reviewer') return;
-    clearTimers(prefix);
-    stopRecordingNow(prefix, 'manual');
-    document.getElementById('btnStartRec_'+prefix).disabled = false;
-    document.getElementById('btnStopRec_'+prefix).disabled = true;
-  };
-
-  document.getElementById('btnAddComment_'+prefix).onclick = ()=>{
-    if(role!=='Reviewer'){
-      alert('Developers cannot add new comments. You may only mark "Fixed by NIIT" and add Follow-up Notes on existing comments in Review Validations.');
-      return;
-    }
-    const key = prefix==='nr' ? nrVideoKey : rvVideoKey;
-    if(!key){ alert('Browse/select a video first.'); return; }
-    if(!box.value.trim()){ alert('Enter or speak a comment.'); return; }
-    if(!pendingCaptures[prefix]){ alert('Click inside the comment box first.'); return; }
-    const [app, vid] = key.split('|'); const cap = pendingCaptures[prefix];
-    const newComment = {CommentID:uid(), Application:app, VideoName:vid, Timestamp:cap.timestamp, TimestampDisplay:fmtTime(cap.timestamp),
-      Frame:cap.frame, CommentText:box.value.trim(), InputType: finalTranscripts[prefix].trim() ? 'Voice':'Text', CreatedBy:currentUserName||role, CreatedAt:nowIso(),
-      FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'No', FollowUpNotes:'', ScreenshotDataUrl:cap.screenshot||''};
-    touchComment(newComment);
-    comments.push(newComment);
-    box.value=''; pendingCaptures[prefix]=null; finalTranscripts[prefix]='';
-    document.getElementById('pendingMeta_'+prefix).innerHTML='';
-    if(prefix==='nr') renderNrRecentTable();
-    renderCommentsTable(); renderDashboard();
-  };
+  container.appendChild(wrapper);
 }
-wireCommentCapture('nr'); wireCommentCapture('rv');
 
-function renderNrRecentTable(){
-  const tbody=document.getElementById('nrRecentTable'); tbody.innerHTML='';
-  if(!nrVideoKey) return;
-  const [app,vid]=nrVideoKey.split('|');
-  comments.filter(c=>c.Application===app&&c.VideoName===vid).sort((a,b)=>b.Timestamp-a.Timestamp).slice(0,8).forEach(c=>{
-    const tr=document.createElement('tr');
-    const shot=c.ScreenshotDataUrl?`<img src="${c.ScreenshotDataUrl}" class="thumb" onclick="openLightbox('${c.ScreenshotDataUrl}')">`:'';
-    tr.innerHTML=`<td>${fmtTime(c.Timestamp)}</td><td>${shot}</td><td>${c.CommentText}</td>`;
+/* ============================= DASHBOARD ============================= */
+function renderDashboard(){
+  const appMap = getVideoGroups();
+  renderGroupedList(document.getElementById('dash-reviewerView'), 'revView', appMap, {
+    onlyStatus: 'Ready for Reviewer',
+    rowRenderer: (app, vn, comments)=>{
+      const div = document.createElement('div');
+      div.className = 'flex-row'; div.style.justifyContent='space-between'; div.style.padding='8px 0';
+      div.innerHTML = `<span>${vn} <span class="small-note">(${comments.length} comments)</span></span>`;
+      const btn = document.createElement('button'); btn.className='btn sm'; btn.textContent='Validate Fixes';
+      btn.onclick = ()=> jumpToValidation(app, vn);
+      div.appendChild(btn);
+      return div;
+    }
+  });
+  renderGroupedList(document.getElementById('dash-developerView'), 'devView', appMap, {
+    onlyStatus: 'Ready for Developer',
+    rowRenderer: (app, vn, comments)=>{
+      const div = document.createElement('div');
+      div.className = 'flex-row'; div.style.justifyContent='space-between'; div.style.padding='8px 0';
+      div.innerHTML = `<span>${vn} <span class="small-note">(${comments.length} comments)</span></span>`;
+      const btn = document.createElement('button'); btn.className='btn sm'; btn.textContent='Fix Issues';
+      btn.onclick = ()=> jumpToValidation(app, vn);
+      div.appendChild(btn);
+      return div;
+    }
+  });
+  renderOverview(appMap);
+}
+
+function renderOverview(appMap){
+  const container = document.getElementById('dash-overview');
+  container.innerHTML = '';
+  const apps = Object.keys(appMap);
+  const allStatuses = ['Ready for Developer','Ready for Reviewer','Signed Off','No comments'];
+
+  const filterPanel = document.createElement('div');
+  filterPanel.className = 'card';
+  filterPanel.innerHTML = `<label>Filter by Application</label><div id="ov-appChecks" class="flex-row checkbox-row" style="margin-bottom:14px;"></div>
+    <label>Filter by Status</label><div id="ov-statusChecks" class="flex-row checkbox-row"></div>`;
+  container.appendChild(filterPanel);
+
+  const appChecks = filterPanel.querySelector('#ov-appChecks');
+  apps.forEach(a=>{
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" value="${a}" class="ov-app-check"> ${a}`;
+    appChecks.appendChild(label);
+  });
+  const statusChecks = filterPanel.querySelector('#ov-statusChecks');
+  allStatuses.forEach(s=>{
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" value="${s}" class="ov-status-check"> ${s}`;
+    statusChecks.appendChild(label);
+  });
+
+  const statCards = document.createElement('div');
+  statCards.className = 'stat-cards';
+  container.appendChild(statCards);
+  const listDiv = document.createElement('div');
+  container.appendChild(listDiv);
+
+  function update(){
+    const selectedApps = new Set([...filterPanel.querySelectorAll('.ov-app-check:checked')].map(c=>c.value));
+    const selectedStatuses = new Set([...filterPanel.querySelectorAll('.ov-status-check:checked')].map(c=>c.value));
+    let totalVideos = 0, filteredCount = 0;
+    apps.forEach(a=> totalVideos += Object.keys(appMap[a]).length );
+
+    renderGroupedList(listDiv, 'overview', appMap, {
+      filterApps: selectedApps, filterStatus: selectedStatuses,
+      rowRenderer: (app, vn, comments, status)=>{
+        filteredCount++;
+        const div = document.createElement('div');
+        div.style.padding='8px 0';
+        div.innerHTML = `<span>${vn} <span class="small-note">(${status}, ${comments.length} comments)</span></span>`;
+        return div;
+      }
+    });
+
+    statCards.innerHTML = `
+      <div class="stat-card"><div class="num">${apps.length}</div><div class="lbl">Applications</div></div>
+      <div class="stat-card"><div class="num">${totalVideos}</div><div class="lbl">Videos</div></div>
+      <div class="stat-card"><div class="num">${filteredCount}</div><div class="lbl">Filtered</div></div>
+    `;
+  }
+  filterPanel.addEventListener('change', update);
+  update();
+}
+
+function jumpToValidation(app, video){
+  document.querySelector('nav.tabs button[data-tab="validations"]').click();
+  document.getElementById('rv-appFilter').value = app;
+  populateVideoFilter('rv-videoFilter', app);
+  document.getElementById('rv-videoFilter').value = video;
+  rvPlayerState.fromDashboard = true;
+  loadVideoForValidation(app, video, true);
+  renderValidations();
+}
+
+/* ============================= FILTER DROPDOWN HELPERS ============================= */
+function getApplications(){
+  return [...new Set(state.comments.filter(c=>!state.deletedIds.has(c.CommentID)).map(c=>c.Application))].filter(Boolean).sort();
+}
+function getVideosForApp(app){
+  return [...new Set(state.comments.filter(c=>!state.deletedIds.has(c.CommentID) && c.Application===app).map(c=>c.VideoName))].filter(Boolean).sort();
+}
+function populateAppFilter(selectId){
+  const sel = document.getElementById(selectId);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Select Application --</option>' +
+    getApplications().map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(current) sel.value = current;
+}
+function populateVideoFilter(selectId, app){
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">-- Select Video --</option>' +
+    (app ? getVideosForApp(app).map(v=>`<option value="${v}">${v}</option>`).join('') : '');
+}
+
+/* ============================= NEW REVIEW TAB ============================= */
+let nrPlayerState = {app:null, video:null, activeComments:[]};
+
+document.getElementById('nr-appFilter').addEventListener('change', (e)=>{
+  populateVideoFilter('nr-videoFilter', e.target.value);
+  document.getElementById('nr-detectedInfo').classList.remove('show');
+});
+document.getElementById('nr-videoFilter').addEventListener('change', (e)=>{
+  nrPlayerState.app = document.getElementById('nr-appFilter').value;
+  nrPlayerState.video = e.target.value;
+  renderNewReview();
+});
+
+document.getElementById('nr-browseBtn').addEventListener('click', ()=>{
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'video/*';
+  input.onchange = ()=>{
+    const file = input.files[0];
+    if(!file) return;
+    const parsed = parseAppAndVideo(file.name);
+    let app, vid;
+    if(parsed){ app = parsed.app; vid = parsed.vid; }
+    else{
+      app = prompt('Could not detect "video" in filename. Enter Application name:');
+      vid = prompt('Enter Video name:');
+      if(!app || !vid) return;
+    }
+    nrPlayerState.app = app; nrPlayerState.video = vid;
+    const url = URL.createObjectURL(file);
+    document.getElementById('nr-video').src = url;
+
+    document.getElementById('nr-detectedApp').textContent = app;
+    document.getElementById('nr-detectedVideo').textContent = vid;
+    document.getElementById('nr-detectedInfo').classList.add('show');
+
+    populateAppFilter('nr-appFilter');
+    document.getElementById('nr-appFilter').value = app;
+    populateVideoFilter('nr-videoFilter', app);
+    document.getElementById('nr-videoFilter').value = vid;
+    renderNewReview();
+  };
+  input.click();
+});
+
+function renderNewReview(){
+  populateAppFilter('nr-appFilter');
+  document.getElementById('nr-quickActionBtn').textContent = state.role === 'Reviewer' ? 'Approve Fix' : 'Mark Fixed by NIIT';
+
+  if(state.role === 'Developer'){
+    document.getElementById('nr-devNote').classList.remove('hidden');
+    document.getElementById('nr-addCommentCard').classList.add('hidden');
+  } else {
+    document.getElementById('nr-devNote').classList.add('hidden');
+    document.getElementById('nr-addCommentCard').classList.remove('hidden');
+  }
+
+  const lockBanner = document.getElementById('nr-lockBanner');
+  const lock = isLockedByOtherRole(nrPlayerState.app, nrPlayerState.video);
+  if(lock){
+    lockBanner.classList.remove('hidden');
+    lockBanner.innerHTML = `🔒 This video is currently locked by <strong>${lock.LockedBy}</strong> (${lock.LockedRole}). Editing is disabled here until they click Review Complete.`;
+    ['nr-commentText','nr-startRec','nr-addCommentBtn','nr-autoScanBtn','nr-quickActionBtn'].forEach(id=> document.getElementById(id).disabled = true);
+  } else {
+    lockBanner.classList.add('hidden');
+    document.getElementById('nr-commentText').disabled = false;
+    document.getElementById('nr-startRec').disabled = false;
+    document.getElementById('nr-addCommentBtn').disabled = false;
+    document.getElementById('nr-autoScanBtn').disabled = false;
+    document.getElementById('nr-quickActionBtn').disabled = false;
+  }
+
+  renderNewReviewComments();
+}
+
+function renderNewReviewComments(){
+  const tbody = document.querySelector('#nr-recentTable tbody');
+  tbody.innerHTML = '';
+  if(!nrPlayerState.app || !nrPlayerState.video){ nrPlayerState.activeComments = []; return; }
+  const comments = state.comments.filter(c=> !state.deletedIds.has(c.CommentID) &&
+    c.Application===nrPlayerState.app && c.VideoName===nrPlayerState.video)
+    .sort((a,b)=> a.Timestamp - b.Timestamp);
+  nrPlayerState.activeComments = comments;
+  if(comments.length === 0){
+    tbody.innerHTML = `<tr><td colspan="4" class="small-note" style="text-align:center; padding:20px;">No comments logged yet for this video.</td></tr>`;
+    return;
+  }
+  comments.slice(-8).reverse().forEach(c=>{
+    const tr = document.createElement('tr');
+    const shotCell = c.ScreenshotDataUrl
+      ? `<img class="thumb" src="${c.ScreenshotDataUrl}" onclick="openLightbox('${c.ScreenshotDataUrl.replace(/'/g,"\\'")}')">`
+      : '<span class="small-note">—</span>';
+    tr.innerHTML = `<td>${c.TimestampDisplay}</td><td>${shotCell}</td><td>${escapeHtml(c.CommentText)}</td><td>${c.CreatedBy}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-/* ============ PREV/NEXT + QUICK ACTION ============ */
-function wireNav(prefix){
-  document.getElementById('btnPrev_'+prefix).onclick=()=>jumpIssue(prefix,-1);
-  document.getElementById('btnNext_'+prefix).onclick=()=>jumpIssue(prefix,1);
-  document.getElementById('player_'+prefix).addEventListener('timeupdate',()=>{
-    const el=document.getElementById('curTimeLabel_'+prefix);
-    if(el) el.textContent=fmtTime(document.getElementById('player_'+prefix).currentTime);
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+let nrCurrentIndex = -1;
+document.getElementById('nr-prevBtn').addEventListener('click', ()=> navigateIssue('nr', -1));
+document.getElementById('nr-nextBtn').addEventListener('click', ()=> navigateIssue('nr', 1));
+
+function navigateIssue(prefix, dir){
+  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
+  const video = document.getElementById(prefix+'-video');
+  const comments = stateObj.activeComments;
+  if(!comments || comments.length === 0) return;
+  let idx = prefix === 'nr' ? nrCurrentIndex : rvCurrentIndex;
+  idx = idx + dir;
+  if(idx < 0) idx = comments.length - 1;
+  if(idx >= comments.length) idx = 0;
+  if(prefix === 'nr') nrCurrentIndex = idx; else rvCurrentIndex = idx;
+  const c = comments[idx];
+  video.currentTime = c.Timestamp;
+  showCurrentComment(prefix, c);
+}
+
+function showCurrentComment(prefix, c){
+  const div = document.getElementById(prefix+'-currentComment');
+  div.innerHTML = `<strong>${c.TimestampDisplay}</strong> — ${escapeHtml(c.CommentText)}
+    <br><span class="small-note">Input: ${c.InputType} | Fixed: ${c.FixedByNIIT||'No'} | Approved: ${c.ApprovedByReviewer||'No'}</span>`;
+  if(prefix==='nr') state.currentCommentIdNR = c.CommentID;
+  else state.currentCommentIdRV = c.CommentID;
+}
+
+document.getElementById('nr-quickActionBtn').addEventListener('click', ()=>{
+  const id = state.currentCommentIdNR;
+  if(!id){ alert('Navigate to a comment first using Prev/Next.'); return; }
+  const row = state.comments.find(c=>c.CommentID === id);
+  if(!row) return;
+  if(isLockedByOtherRole(row.Application, row.VideoName)){ alert('This video is locked by the other role right now.'); return; }
+  if(state.role === 'Reviewer'){
+    row.ApprovedByReviewer = 'Yes';
+    touchComment(row);
+    tryAcquireLockForAction(row.Application, row.VideoName);
+    logActivity('Approved', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} approved`);
+  } else {
+    row.FixedByNIIT = 'Yes';
+    touchComment(row);
+    tryAcquireLockForAction(row.Application, row.VideoName);
+    logActivity('Fixed by NIIT', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} marked fixed`);
+  }
+  if(state.usingFSApi) writeCycle();
+  renderAll();
+});
+
+/* ============================= SCREENSHOT CAPTURE ============================= */
+function captureScreenshot(videoEl){
+  if(!videoEl || videoEl.readyState < 2) return '';
+  let width = 160, quality = 0.6;
+  let dataUrl = '';
+  for(let attempt=0; attempt<8; attempt++){
+    const canvas = document.createElement('canvas');
+    const scale = width / videoEl.videoWidth;
+    canvas.width = width;
+    canvas.height = Math.round(videoEl.videoHeight * scale) || 90;
+    const ctx = canvas.getContext('2d');
+    try{ ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); }catch(e){ return ''; }
+    dataUrl = canvas.toDataURL('image/jpeg', quality);
+    if(dataUrl.length < 30000) return dataUrl;
+    width = Math.round(width * 0.8);
+    quality = Math.max(0.3, quality - 0.1);
+  }
+  console.warn('Could not compress screenshot below limit; saving without image.');
+  return '';
+}
+
+/* ============================= ADD COMMENT (shared logic) ============================= */
+let pendingScreenshot = {nr:'', rv:''};
+let pendingTimestamp = {nr:null, rv:null};
+
+function setupCommentCardBehavior(prefix){
+  const textarea = document.getElementById(prefix+'-commentText');
+  const videoEl = document.getElementById(prefix+'-video');
+  textarea.addEventListener('focus', ()=>{
+    if(state.role !== 'Reviewer') return;
+    if(!videoEl.paused) videoEl.pause();
+    pendingTimestamp[prefix] = videoEl.currentTime || 0;
+    pendingScreenshot[prefix] = captureScreenshot(videoEl);
+  });
+
+  document.getElementById(prefix+'-addCommentBtn').addEventListener('click', ()=>{
+    const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
+    if(!stateObj.app || !stateObj.video){ alert('Please select a video first.'); return; }
+    if(isLockedByOtherRole(stateObj.app, stateObj.video)){ alert('This video is locked by the other role right now. Please try again shortly.'); return; }
+    const text = textarea.value.trim();
+    if(!text){ alert('Comment text cannot be empty.'); return; }
+    if(pendingTimestamp[prefix] === null){
+      pendingTimestamp[prefix] = videoEl.currentTime || 0;
+      pendingScreenshot[prefix] = captureScreenshot(videoEl);
+    }
+    const row = {
+      CommentID: uid(), Application: stateObj.app, VideoName: stateObj.video,
+      Timestamp: pendingTimestamp[prefix], TimestampDisplay: secondsToDisplay(pendingTimestamp[prefix]),
+      Frame: '', CommentText: text, InputType: recordingState[prefix].wasUsed ? 'Voice' : 'Text',
+      CreatedBy: state.userName, CreatedAt: new Date().toISOString(),
+      FixedByNIIT: 'No', ApprovedByReviewer: 'No', AutoDetected: 'No', FollowUpNotes: '',
+      ScreenshotDataUrl: pendingScreenshot[prefix] || '',
+    };
+    touchComment(row);
+    state.comments.push(row);
+    tryAcquireLockForAction(stateObj.app, stateObj.video);
+    logActivity('Comment Added', stateObj.app, stateObj.video, `"${text.slice(0,60)}${text.length>60?'…':''}" at ${row.TimestampDisplay}`);
+    textarea.value = '';
+    pendingTimestamp[prefix] = null; pendingScreenshot[prefix] = '';
+    recordingState[prefix].wasUsed = false;
+    if(state.usingFSApi) writeCycle();
+    renderAll();
   });
 }
-function getVideoComments(key){
-  if(!key) return [];
-  const [app,vid]=key.split('|');
-  return comments.filter(c=>c.Application===app&&c.VideoName===vid).sort((a,b)=>a.Timestamp-b.Timestamp);
-}
-function jumpIssue(prefix,dir){
-  const key=prefix==='nr'?nrVideoKey:rvVideoKey; if(!key) return;
-  const player=document.getElementById('player_'+prefix); const rows=getVideoComments(key);
-  if(!rows.length) return;
-  const cur=player.currentTime; let target;
-  if(dir<0) target=[...rows].reverse().find(c=>c.Timestamp<cur-0.5)??rows[rows.length-1];
-  else target=rows.find(c=>c.Timestamp>cur+0.5)??rows[0];
-  player.currentTime=target.Timestamp; player.pause();
+setupCommentCardBehavior('nr');
+setupCommentCardBehavior('rv');
 
-  const fullEl = document.getElementById('currentCommentFull_'+prefix);
-  if(fullEl){ fullEl.innerHTML = `<b>${fmtTime(target.Timestamp)}</b> — ${target.CommentText}`; }
+/* ============================= VOICE RECORDING ============================= */
+let recordingState = {
+  nr: {active:false, wasUsed:false, hardTimer:null, recognition:null, restartTimer:null},
+  rv: {active:false, wasUsed:false, hardTimer:null, recognition:null, restartTimer:null}
+};
+let recCountdownInterval = null;
 
-  if(prefix==='rv'){
-    rvCurrentCommentId=target.CommentID;
-    updateCurrentIssueLabel();
+function startRecording(prefix){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert('Speech recognition not supported in this browser.'); return; }
+  const textarea = document.getElementById(prefix+'-commentText');
+  const videoEl = document.getElementById(prefix+'-video');
+  if(!videoEl.paused) videoEl.pause();
+  pendingTimestamp[prefix] = videoEl.currentTime || 0;
+  pendingScreenshot[prefix] = captureScreenshot(videoEl);
+
+  const rs = recordingState[prefix];
+  rs.active = true; rs.wasUsed = true;
+  document.getElementById(prefix+'-startRec').disabled = true;
+  document.getElementById(prefix+'-stopRec').disabled = false;
+
+  const startTime = Date.now();
+  document.getElementById('recordingBanner').style.display = 'flex';
+  recCountdownInterval = setInterval(()=>{
+    const remaining = Math.max(0, 120 - Math.floor((Date.now()-startTime)/1000));
+    const m = Math.floor(remaining/60), s = remaining%60;
+    document.getElementById('recCountdown').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(remaining <= 0) stopRecording(prefix);
+  }, 500);
+
+  rs.hardTimer = setTimeout(()=> stopRecording(prefix), 120000);
+
+  function createAndStart(){
+    if(!rs.active) return;
+    const recog = new SR();
+    recog.continuous = true; recog.interimResults = true; recog.lang = 'en-US';
+    recog.onresult = (e)=>{
+      let transcript = '';
+      for(let i=0; i<e.results.length; i++) transcript += e.results[i][0].transcript;
+      textarea.value = transcript;
+    };
+    recog.onerror = (e)=> console.warn('Speech recognition error', e);
+    recog.onend = ()=>{ if(rs.active) rs.restartTimer = setTimeout(createAndStart, 250); };
+    rs.recognition = recog;
+    try{ recog.start(); }catch(e){ console.warn(e); }
   }
+  createAndStart();
 }
-wireNav('nr'); wireNav('rv');
-function updateCurrentIssueLabel(){
-  const el=document.getElementById('currentIssueLabel_rv');
-  const c=comments.find(x=>x.CommentID===rvCurrentCommentId);
-  if(el){ el.textContent = c ? `Viewing: ${fmtTime(c.Timestamp)}` : 'Use Prev/Next or click a timestamp.'; }
-  const fullEl = document.getElementById('currentCommentFull_rv');
-  if(fullEl){ fullEl.innerHTML = c ? `<b>${fmtTime(c.Timestamp)}</b> — ${c.CommentText}` : 'Use Prev/Next to view a comment here.'; }
+
+function stopRecording(prefix){
+  const rs = recordingState[prefix];
+  rs.active = false;
+  if(rs.recognition){ try{ rs.recognition.stop(); }catch(e){} }
+  clearTimeout(rs.hardTimer); clearTimeout(rs.restartTimer);
+  document.getElementById(prefix+'-startRec').disabled = false;
+  document.getElementById(prefix+'-stopRec').disabled = true;
+  document.getElementById('recordingBanner').style.display = 'none';
+  if(recCountdownInterval){ clearInterval(recCountdownInterval); recCountdownInterval = null; }
 }
-document.getElementById('btnQuickAction_rv').onclick=()=>{
-  const c=comments.find(x=>x.CommentID===rvCurrentCommentId);
-  if(!c){ alert('Select an issue first.'); return; }
-  if(role==='Developer'){ c.FixedByNIIT='Yes'; touchComment(c); }
-  else if(role==='Reviewer'){
-    if(c.FixedByNIIT!=='Yes' && !confirm('Not yet marked Fixed by NIIT. Approve anyway?')) return;
-    c.ApprovedByReviewer='Yes'; touchComment(c);
-  }
-  renderCommentsTable(); renderDashboard(); updateCurrentIssueLabel();
+
+document.getElementById('nr-startRec').onclick = ()=> startRecording('nr');
+document.getElementById('nr-stopRec').onclick = ()=> stopRecording('nr');
+document.getElementById('rv-startRec').onclick = ()=> startRecording('rv');
+document.getElementById('rv-stopRec').onclick = ()=> stopRecording('rv');
+document.getElementById('stopRecFromBanner').onclick = ()=>{
+  if(recordingState.nr.active) stopRecording('nr');
+  if(recordingState.rv.active) stopRecording('rv');
 };
 
-/* ============ STATUS HELPERS ============ */
-function statusOf(c){ if(c.ApprovedByReviewer==='Yes') return 'approved'; if(c.FixedByNIIT==='Yes') return 'fixed'; return 'open'; }
-function computeVideoStatus(app,vid){
-  const rows=comments.filter(c=>c.Application===app&&c.VideoName===vid);
-  if(!rows.length) return {total:0,status:'no-comments'};
-  const fixed=rows.filter(c=>c.FixedByNIIT==='Yes').length, approved=rows.filter(c=>c.ApprovedByReviewer==='Yes').length;
-  const status=approved===rows.length?'signedoff':fixed===rows.length?'readyReviewer':'readyDeveloper';
-  return {total:rows.length, fixed, approved, status};
-}
-function getAllVideoStatuses(){
-  const apps=[...new Set(comments.map(c=>c.Application).concat(Object.keys(videoFiles).map(k=>k.split('|')[0])))].filter(Boolean);
-  const all=[];
-  apps.forEach(app=>{
-    const vids=[...new Set(comments.filter(c=>c.Application===app).map(c=>c.VideoName).concat(Object.keys(videoFiles).filter(k=>k.startsWith(app+'|')).map(k=>k.split('|')[1])))];
-    vids.forEach(v=>all.push({app,v,s:computeVideoStatus(app,v)}));
+/* ============================= AUTO-SCAN FOR URLS ============================= */
+async function runAutoScan(prefix){
+  if(state.role !== 'Reviewer'){ alert('Only Reviewers can run Auto-Scan.'); return; }
+  const videoEl = document.getElementById(prefix+'-video');
+  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
+  if(!stateObj.app || !stateObj.video || !videoEl.src){ alert('Please load a video first.'); return; }
+  if(isLockedByOtherRole(stateObj.app, stateObj.video)){ alert('This video is locked by the other role right now.'); return; }
+  videoEl.pause();
+  const duration = videoEl.duration || 0;
+  if(!duration){ alert('Video duration unknown.'); return; }
+  const steps = 40;
+  const resultsDiv = document.getElementById(prefix+'-scanResults');
+  resultsDiv.innerHTML = '<div class="small-note">🔍 Scanning... this may take a while.</div>';
+
+  const observations = [];
+  const corners = [{x:0,y:0},{x:0.7,y:0},{x:0,y:0.8},{x:0.7,y:0.8}];
+
+  for(let i=0; i<steps; i++){
+    const t = (duration / steps) * i;
+    await seekVideo(videoEl, t);
+    for(const corner of corners){
+      const canvas = document.createElement('canvas');
+      const cw = videoEl.videoWidth * 0.3, ch = videoEl.videoHeight * 0.2;
+      canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      try{ ctx.drawImage(videoEl, corner.x*videoEl.videoWidth, corner.y*videoEl.videoHeight, cw, ch, 0, 0, cw, ch); }catch(e){ continue; }
+      const dataUrl = canvas.toDataURL('image/png');
+      try{
+        const { data: { text } } = await Tesseract.recognize(dataUrl, 'eng');
+        const match = text.match(/(https?:\/\/[^\s]+)|(www\.[^\s]+)/i);
+        if(match) observations.push({timestamp:t, display:secondsToDisplay(t), text:match[0], screenshot: captureScreenshot(videoEl)});
+      }catch(e){ console.warn('OCR failed', e); }
+    }
+  }
+
+  resultsDiv.innerHTML = '';
+  if(observations.length === 0){ resultsDiv.innerHTML = '<div class="small-note">No URL-like text detected.</div>'; return; }
+  observations.forEach(obs=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<strong>${obs.display}</strong><br>
+      ${obs.screenshot?`<img class="thumb" src="${obs.screenshot}">`:''}
+      <p>Detected: ${escapeHtml(obs.text)}</p>`;
+    const acceptBtn = document.createElement('button'); acceptBtn.className='btn sm'; acceptBtn.textContent='Accept';
+    const rejectBtn = document.createElement('button'); rejectBtn.className='btn secondary sm'; rejectBtn.textContent='Reject';
+    acceptBtn.onclick = ()=>{
+      const row = {
+        CommentID: uid(), Application: stateObj.app, VideoName: stateObj.video,
+        Timestamp: obs.timestamp, TimestampDisplay: obs.display, Frame:'',
+        CommentText: `Possible URL/link detected: ${obs.text}`,
+        InputType:'Auto', CreatedBy: state.userName, CreatedAt: new Date().toISOString(),
+        FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'',
+        ScreenshotDataUrl: obs.screenshot || ''
+      };
+      touchComment(row); state.comments.push(row);
+      tryAcquireLockForAction(stateObj.app, stateObj.video);
+      logActivity('Comment Added', stateObj.app, stateObj.video, `Auto-detected URL at ${obs.display}`);
+      card.remove();
+      if(state.usingFSApi) writeCycle();
+      renderAll();
+    };
+    rejectBtn.onclick = ()=> card.remove();
+    card.appendChild(acceptBtn); card.appendChild(rejectBtn);
+    resultsDiv.appendChild(card);
   });
-  return all;
 }
-function computeAppSummary(app, allStatuses){
-  const vids = allStatuses.filter(x=>x.app===app);
-  return {
-    total: vids.length,
-    readyDeveloper: vids.filter(x=>x.s.status==='readyDeveloper').length,
-    readyReviewer: vids.filter(x=>x.s.status==='readyReviewer').length,
-    signedoff: vids.filter(x=>x.s.status==='signedoff').length,
-    noComments: vids.filter(x=>x.s.status==='no-comments').length
+
+function seekVideo(videoEl, t){
+  return new Promise(resolve=>{
+    function onSeeked(){ videoEl.removeEventListener('seeked', onSeeked); resolve(); }
+    videoEl.addEventListener('seeked', onSeeked);
+    videoEl.currentTime = t;
+    setTimeout(resolve, 500);
+  });
+}
+
+document.getElementById('nr-autoScanBtn').onclick = ()=> runAutoScan('nr');
+document.getElementById('rv-autoScanBtn').onclick = ()=> runAutoScan('rv');
+
+/* ============================= REVIEW VALIDATIONS TAB ============================= */
+let rvPlayerState = {app:null, video:null, activeComments:[], fromDashboard:false};
+let rvCurrentIndex = -1;
+
+function resetValidationFilters(){
+  if(rvPlayerState.fromDashboard){ rvPlayerState.fromDashboard = false; return; }
+  document.getElementById('rv-appFilter').value = '';
+  document.getElementById('rv-videoFilter').innerHTML = '<option value="">-- Select Video --</option>';
+  document.getElementById('rv-statusFilter').value = '';
+  rvPlayerState.app = null; rvPlayerState.video = null;
+}
+
+document.getElementById('rv-appFilter').addEventListener('change', (e)=>{
+  populateVideoFilter('rv-videoFilter', e.target.value);
+  rvPlayerState.app = e.target.value; rvPlayerState.video = null;
+  renderValidations();
+});
+document.getElementById('rv-videoFilter').addEventListener('change', (e)=>{
+  rvPlayerState.app = document.getElementById('rv-appFilter').value;
+  rvPlayerState.video = e.target.value;
+  if(rvPlayerState.app && rvPlayerState.video){
+    loadVideoForValidation(rvPlayerState.app, rvPlayerState.video, false);
+  }
+  renderValidations();
+});
+document.getElementById('rv-statusFilter').addEventListener('change', renderValidations);
+
+document.getElementById('rv-browseBtn').addEventListener('click', ()=>{
+  if(!rvPlayerState.app || !rvPlayerState.video){ alert('Please select an Application and Video from the dropdowns first.'); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'video/*';
+  input.onchange = ()=>{
+    const file = input.files[0]; if(!file) return;
+    document.getElementById('rv-video').src = URL.createObjectURL(file);
+  };
+  input.click();
+});
+
+function loadVideoForValidation(app, video, fromDashboard){
+  rvPlayerState.app = app; rvPlayerState.video = video; rvPlayerState.fromDashboard = fromDashboard;
+}
+
+document.getElementById('rv-prevBtn').addEventListener('click', ()=> navigateIssue('rv', -1));
+document.getElementById('rv-nextBtn').addEventListener('click', ()=> navigateIssue('rv', 1));
+
+document.getElementById('rv-quickActionBtn').addEventListener('click', ()=>{
+  const id = state.currentCommentIdRV;
+  if(!id){ alert('Navigate to a comment first using Prev/Next or a timestamp link.'); return; }
+  const row = state.comments.find(c=>c.CommentID === id);
+  if(!row) return;
+  if(isLockedByOtherRole(row.Application, row.VideoName)){ alert('This video is locked by the other role right now.'); return; }
+  if(state.role === 'Reviewer'){
+    row.ApprovedByReviewer = 'Yes';
+    touchComment(row);
+    tryAcquireLockForAction(row.Application, row.VideoName);
+    logActivity('Approved', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} approved`);
+  } else {
+    row.FixedByNIIT = 'Yes';
+    touchComment(row);
+    tryAcquireLockForAction(row.Application, row.VideoName);
+    logActivity('Fixed by NIIT', row.Application, row.VideoName, `Comment at ${row.TimestampDisplay} marked fixed`);
+  }
+  if(state.usingFSApi) writeCycle();
+  renderAll();
+});
+
+function renderActivityLog(){
+  const container = document.getElementById('rv-activityLog');
+  if(!container) return;
+  if(state.activityLog.length === 0){
+    container.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="icon">🕑</div>No activity yet.</div>`;
+    return;
+  }
+  container.innerHTML = state.activityLog.slice(0,20).map(a=>`
+    <div class="activity-item">
+      <div class="activity-icon">${activityIcon(a.Action)}</div>
+      <div class="activity-text">
+        <div><strong>${escapeHtml(a.User)}</strong> (${a.Role}) — ${escapeHtml(a.Action)}${a.Application?` on <strong>${escapeHtml(a.Application)} / ${escapeHtml(a.VideoName)}</strong>`:''}</div>
+        <div class="small-note">${escapeHtml(a.Details||'')}</div>
+        <div class="activity-time">${timeAgo(a.TimestampEpoch)} · ${new Date(a.TimestampEpoch).toLocaleString()}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderValidations(){
+  populateAppFilter('rv-appFilter');
+  const app = document.getElementById('rv-appFilter').value;
+  const video = document.getElementById('rv-videoFilter').value;
+  const statusFilterVal = document.getElementById('rv-statusFilter').value;
+
+  document.getElementById('rv-quickActionBtn').textContent = state.role === 'Reviewer' ? 'Approve Fix' : 'Mark Fixed by NIIT';
+  document.getElementById('rv-reviewCompleteBtn').textContent = state.role === 'Developer'
+    ? '✔ Fix Completed – Stamp & Sync'
+    : '✔ Review Complete – Stamp & Sync';
+
+  const isDev = state.role === 'Developer';
+  if(isDev && (!app || !video)){
+    document.getElementById('rv-devPrompt').classList.remove('hidden');
+    document.getElementById('rv-workspace').classList.add('hidden');
+    renderActivityLog();
+    return;
+  } else {
+    document.getElementById('rv-devPrompt').classList.add('hidden');
+    document.getElementById('rv-workspace').classList.remove('hidden');
+    document.getElementById('rv-addCommentCard').classList.toggle('hidden', state.role !== 'Reviewer');
+  }
+
+  const lockBanner = document.getElementById('rv-lockBanner');
+  const lock = isLockedByOtherRole(app, video);
+  if(lock && app && video){
+    lockBanner.classList.remove('hidden');
+    lockBanner.innerHTML = `🔒 This video is currently locked by <strong>${lock.LockedBy}</strong> (${lock.LockedRole}). Editing is disabled here until they click Review Complete.`;
+  } else {
+    lockBanner.classList.add('hidden');
+  }
+  const rvLockedForMe = !!lock;
+  ['rv-commentText','rv-startRec','rv-addCommentBtn','rv-autoScanBtn','rv-quickActionBtn'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = rvLockedForMe;
+  });
+
+  rvPlayerState.activeComments = state.comments.filter(c=>!state.deletedIds.has(c.CommentID) &&
+    (!app || c.Application===app) && (!video || c.VideoName===video))
+    .sort((a,b)=>a.Timestamp-b.Timestamp);
+
+  const appMap = getVideoGroups();
+  const built = {};
+  Object.keys(appMap).forEach(a=>{
+    if(app && a !== app) return;
+    Object.keys(appMap[a]).forEach(v=>{
+      if(video && v !== video) return;
+      const comments = appMap[a][v];
+      const status = computeStatus(comments);
+      if(status === 'Signed Off') return;
+      if(statusFilterVal && status !== statusFilterVal) return;
+      built[a] = built[a] || {};
+      built[a][v] = comments;
+    });
+  });
+
+  renderGroupedList(document.getElementById('rv-activeGroups'), 'rvActive', built, {
+    showVideoSubgroups: true,
+    rowRenderer: (a, v, comments)=> renderCommentTable(a, v, comments)
+  });
+
+  const signedTbody = document.getElementById('rv-signedOffTable');
+  signedTbody.innerHTML = '';
+  let anySignedOff = false;
+  Object.keys(appMap).forEach(a=>{
+    Object.keys(appMap[a]).forEach(v=>{
+      const comments = appMap[a][v];
+      const status = computeStatus(comments);
+      if(status !== 'Signed Off') return;
+      anySignedOff = true;
+      const approvedCount = comments.filter(c=>String(c.ApprovedByReviewer).toLowerCase()==='yes').length;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${a}</td><td>${v}</td><td>${comments.length}</td><td>${approvedCount}</td>`;
+      const tdBtns = document.createElement('td');
+      const viewBtn = document.createElement('button'); viewBtn.className='btn secondary sm'; viewBtn.textContent='View';
+      viewBtn.onclick = ()=>{ jumpToValidation(a,v); };
+      tdBtns.appendChild(viewBtn);
+      if(state.role === 'Reviewer'){
+        const rbBtn = document.createElement('button'); rbBtn.className='btn danger sm'; rbBtn.textContent='Rollback';
+        rbBtn.onclick = ()=>{
+          if(!confirm('Rollback this signed-off video? All approvals will be reset.')) return;
+          comments.forEach(c=>{ c.ApprovedByReviewer = 'No'; touchComment(c); });
+          tryAcquireLockForAction(a, v);
+          logActivity('Rollback', a, v, `${state.userName} rolled back sign-off`);
+          if(state.usingFSApi) writeCycle();
+          renderAll();
+        };
+        tdBtns.appendChild(rbBtn);
+      }
+      tr.appendChild(tdBtns);
+      signedTbody.appendChild(tr);
+    });
+  });
+  if(!anySignedOff){
+    signedTbody.innerHTML = `<tr><td colspan="5" class="small-note" style="text-align:center; padding:16px;">No videos signed off yet.</td></tr>`;
+  }
+
+  renderActivityLog();
+
+  document.getElementById('rv-expandAll').onclick = ()=>{
+    document.querySelectorAll('#rv-activeGroups .group-header, #rv-activeGroups .video-group-header').forEach(h=>h.classList.add('expanded'));
+    document.querySelectorAll('#rv-activeGroups .group-body').forEach(b=>b.classList.add('open'));
+  };
+  document.getElementById('rv-collapseAll').onclick = ()=>{
+    document.querySelectorAll('#rv-activeGroups .group-header, #rv-activeGroups .video-group-header').forEach(h=>h.classList.remove('expanded'));
+    document.querySelectorAll('#rv-activeGroups .group-body').forEach(b=>b.classList.remove('open'));
   };
 }
-function appSummaryBadgesHtml(summary){
-  let html = '<div class="app-counts">';
-  if(summary.readyDeveloper>0) html += `<span class="badge b-developer">${summary.readyDeveloper} Dev</span>`;
-  if(summary.readyReviewer>0) html += `<span class="badge b-reviewer">${summary.readyReviewer} Reviewer</span>`;
-  if(summary.signedoff>0) html += `<span class="badge b-signedoff">${summary.signedoff} Signed Off</span>`;
-  if(summary.noComments>0) html += `<span class="badge b-none">${summary.noComments} No comments</span>`;
-  html += '</div>';
-  return html;
-}
 
-/* ============ EXPAND/COLLAPSE ============ */
-function toggleApp(appKey){
-  if(expandedApps.has(appKey)) expandedApps.delete(appKey); else expandedApps.add(appKey);
-  renderDashboard(); renderCommentsTable();
-}
-function toggleVideo(vidKey){
-  if(expandedVideos.has(vidKey)) expandedVideos.delete(vidKey); else expandedVideos.add(vidKey);
-  renderDashboard(); renderCommentsTable();
-}
-window.toggleApp=toggleApp; window.toggleVideo=toggleVideo;
-function expandAllApps(appKeys){ appKeys.forEach(k=>expandedApps.add(k)); renderDashboard(); renderCommentsTable(); }
-function collapseAllApps(appKeys){ appKeys.forEach(k=>expandedApps.delete(k)); expandedVideos.clear(); renderDashboard(); renderCommentsTable(); }
-window.expandAllApps=expandAllApps; window.collapseAllApps=collapseAllApps;
+function renderCommentTable(app, video, comments){
+  const videoLock = isLockedByOtherRole(app, video);
+  const table = document.createElement('table');
+  table.className = 'rv-comment-table';
+  table.innerHTML = `
+    <colgroup>
+      <col style="width:9%">
+      <col style="width:8%">
+      <col style="width:25%">
+      <col style="width:7%">
+      <col style="width:10%">
+      <col style="width:10%">
+      <col style="width:19%">
+      <col style="width:12%">
+    </colgroup>
+    <thead><tr><th>Time</th><th>Shot</th><th>Comment</th><th>Input</th>
+    <th>Fixed</th><th>Approved</th><th>Follow-up</th><th>Actions</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  comments.sort((a,b)=>a.Timestamp-b.Timestamp).forEach(c=>{
+    const tr = document.createElement('tr');
 
-/* ============ DASHBOARD ============ */
-function renderDashboard(){
-  if(dashSub==='reviewer') renderReviewerDash();
-  else if(dashSub==='developer') renderDeveloperDash();
-  else renderOverviewDash();
-}
-function renderRoleDash(containerId, filterFn, actionLabel, actionHandlerName){
-  const allStatuses = getAllVideoStatuses();
-  const visibleVideos = allStatuses.filter(filterFn);
-  const apps = [...new Set(visibleVideos.map(x=>x.app))];
-  const el = document.getElementById(containerId);
-  if(!apps.length){ el.innerHTML = '<p class="note">Nothing here right now.</p>'; return; }
+    const tdTime = document.createElement('td');
+    const timeLink = document.createElement('a');
+    timeLink.href = '#'; timeLink.textContent = c.TimestampDisplay;
+    timeLink.onclick = (e)=>{
+      e.preventDefault();
+      const videoEl = document.getElementById('rv-video');
+      videoEl.currentTime = c.Timestamp;
+      showCurrentComment('rv', c);
+      rvCurrentIndex = rvPlayerState.activeComments.findIndex(x=>x.CommentID===c.CommentID);
+    };
+    tdTime.appendChild(timeLink); tr.appendChild(tdTime);
 
-  const appKeys = apps.map(app => 'dash_'+containerId+'_'+app);
-  const controls = `<div class="group-controls">
-    <button class="secondary" onclick='expandAllApps(${JSON.stringify(appKeys)})'>Expand All</button>
-    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(appKeys)})'>Collapse All</button>
-  </div>`;
+    const tdShot = document.createElement('td');
+    if(c.ScreenshotDataUrl){
+      const img = document.createElement('img');
+      img.className = 'thumb'; img.src = c.ScreenshotDataUrl;
+      img.onclick = ()=> openLightbox(c.ScreenshotDataUrl);
+      tdShot.appendChild(img);
+    }
+    tr.appendChild(tdShot);
 
-  const groupsHtml = apps.map(app=>{
-    const appKey = 'dash_'+containerId+'_'+app;
-    const isCollapsed = !expandedApps.has(appKey);
-    const summary = computeAppSummary(app, allStatuses);
-    const videosForApp = visibleVideos.filter(x=>x.app===app);
-    const videoRows = videosForApp.map(({v,s})=>`
-      <div class="dash-card" style="margin-bottom:8px;">
-        <div class="dash-card-title">${v}</div>
-        <span class="badge ${s.status==='readyDeveloper'?'b-developer':'b-reviewer'}">${s.status==='readyDeveloper'?'Ready for Developer':'Ready for Reviewer'}</span>
-        <p class="note">${s.total} comment(s) • ${s.fixed} fixed • ${s.approved} approved</p>
-        <div class="dash-card-actions"><button onclick="${actionHandlerName}('${app}','${v}')">${actionLabel}</button></div>
-      </div>`).join('');
-    return `
-      <div class="app-group">
-        <div class="app-header ${isCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
-          <span class="chevron">▼</span><span class="app-name">${app}</span>${appSummaryBadgesHtml(summary)}
-        </div>
-        <div class="app-body ${isCollapsed?'collapsed':''}">${videoRows}</div>
-      </div>`;
-  }).join('');
+    const tdText = document.createElement('td');
+    tdText.innerHTML = `${escapeHtml(c.CommentText)}<br><span class="small-note">Last updated by ${c._LastModifiedBy||c.CreatedBy} · ${c._LastModifiedAt? timeAgo(new Date(c._LastModifiedAt).getTime()) : ''} (${c._LastModifiedAt||c.CreatedAt})</span>`;
+    tr.appendChild(tdText);
 
-  el.innerHTML = controls + groupsHtml;
-}
-function renderReviewerDash(){
-  renderRoleDash('reviewerDashContent', x=>x.s.status==='readyReviewer', 'Validate Fixes', 'openVideoIn_validations');
-}
-function renderDeveloperDash(){
-  renderRoleDash('developerDashContent', x=>x.s.status==='readyDeveloper', 'Fix Issues', 'openVideoIn_validations');
-}
-function openVideoIn_validations(app,vid){ openVideoIn('validations', app, vid); }
-window.openVideoIn_validations = openVideoIn_validations;
+    const tdInput = document.createElement('td'); tdInput.textContent = c.InputType; tr.appendChild(tdInput);
 
-function buildMultiselect(id, options, onChange){
-  const box=document.getElementById(id);
-  box.innerHTML=options.map(o=>`<label><input type="checkbox" value="${o}" checked> ${o}</label>`).join('');
-  box.querySelectorAll('input').forEach(cb=>cb.onchange=onChange);
-}
-function getCheckedValues(id){ return [...document.querySelectorAll('#'+id+' input:checked')].map(cb=>cb.value); }
+    const tdFixed = document.createElement('td');
+    const fixedSel = document.createElement('select');
+    fixedSel.innerHTML = `<option value="No">No</option><option value="Yes">Yes</option>`;
+    fixedSel.value = c.FixedByNIIT || 'No';
+    fixedSel.disabled = videoLock;
+    fixedSel.onchange = ()=>{
+      if(state.role !== 'Developer'){ alert('Only Developers (NIIT) can change "Fixed by NIIT".'); fixedSel.value = c.FixedByNIIT || 'No'; return; }
+      if(isLockedByOtherRole(app, video)){ alert('This video is locked by the other role right now.'); fixedSel.value = c.FixedByNIIT || 'No'; return; }
+      c.FixedByNIIT = fixedSel.value; touchComment(c);
+      tryAcquireLockForAction(app, video);
+      logActivity('Fixed by NIIT', app, video, `Comment at ${c.TimestampDisplay} set to "${fixedSel.value}"`);
+      if(state.usingFSApi) writeCycle();
+      renderAll();
+    };
+    tdFixed.appendChild(fixedSel); tr.appendChild(tdFixed);
 
-function renderOverviewDash(){
-  const all=getAllVideoStatuses();
-  const apps=[...new Set(all.map(x=>x.app))];
-  if(!document.getElementById('msAppFilter').dataset.built){
-    buildMultiselect('msAppFilter', apps, renderOverviewDash);
-    document.getElementById('msAppFilter').dataset.built='1';
-    document.querySelectorAll('#msStatusFilter input').forEach(cb=>cb.onchange=renderOverviewDash);
-  }
-  const selectedApps=getCheckedValues('msAppFilter');
-  const selectedStatuses=getCheckedValues('msStatusFilter');
-  const filtered=all.filter(x=>selectedApps.includes(x.app) && selectedStatuses.includes(x.s.status));
+    const tdApproved = document.createElement('td');
+    const apprSel = document.createElement('select');
+    apprSel.innerHTML = `<option value="No">No</option><option value="Yes">Yes</option>`;
+    apprSel.value = c.ApprovedByReviewer || 'No';
+    apprSel.disabled = videoLock;
+    apprSel.onchange = ()=>{
+      if(state.role !== 'Reviewer'){ alert('Only the Reviewer can change "Approved by Reviewer".'); apprSel.value = c.ApprovedByReviewer || 'No'; return; }
+      if(isLockedByOtherRole(app, video)){ alert('This video is locked by the other role right now.'); apprSel.value = c.ApprovedByReviewer || 'No'; return; }
+      c.ApprovedByReviewer = apprSel.value; touchComment(c);
+      tryAcquireLockForAction(app, video);
+      logActivity('Approved', app, video, `Comment at ${c.TimestampDisplay} set to "${apprSel.value}"`);
+      if(state.usingFSApi) writeCycle();
+      renderAll();
+    };
+    tdApproved.appendChild(apprSel); tr.appendChild(tdApproved);
 
-  document.getElementById('overviewStatBar').innerHTML=`
-    <div class="stat"><div class="num">${apps.length}</div><div class="note">Total Applications</div></div>
-    <div class="stat"><div class="num">${all.length}</div><div class="note">Total Videos</div></div>
-    <div class="stat"><div class="num">${filtered.length}</div><div class="note">Matching current filters</div></div>`;
+    const tdFollowUp = document.createElement('td');
+    const fuInput = document.createElement('input');
+    fuInput.type = 'text'; fuInput.value = c.FollowUpNotes || '';
+    fuInput.disabled = videoLock;
+    fuInput.addEventListener('focus', ()=>{ state.isTypingNow = true; });
+    fuInput.addEventListener('blur', ()=>{
+      state.isTypingNow = false;
+      if(fuInput.value !== c.FollowUpNotes){
+        c.FollowUpNotes = fuInput.value; touchComment(c);
+        logActivity('Follow-up Note', app, video, `Note updated on comment at ${c.TimestampDisplay}`);
+        if(state.usingFSApi) writeCycle();
+      }
+    });
+    tdFollowUp.appendChild(fuInput); tr.appendChild(tdFollowUp);
 
-  const grouped={};
-  filtered.forEach(x=>{ (grouped[x.app]=grouped[x.app]||[]).push(x); });
-  const el=document.getElementById('overviewContent');
-  if(!Object.keys(grouped).length){ el.innerHTML='<p class="note">No videos match the current filters.</p>'; return; }
-
-  const appKeys = Object.keys(grouped).map(app=>'overview_'+app);
-  const controls = `<div class="group-controls">
-    <button class="secondary" onclick='expandAllApps(${JSON.stringify(appKeys)})'>Expand All</button>
-    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(appKeys)})'>Collapse All</button>
-  </div>`;
-
-  const groupsHtml = Object.entries(grouped).map(([app, items])=>{
-    const appKey = 'overview_'+app;
-    const isCollapsed = !expandedApps.has(appKey);
-    const summary = computeAppSummary(app, all);
-    const videoRows = items.map(({v,s})=>{
-      const label=s.status==='signedoff'?'Signed Off':s.status==='readyReviewer'?'Ready for Reviewer':s.status==='readyDeveloper'?'Ready for Developer':'No comments';
-      const cls=s.status==='signedoff'?'b-signedoff':s.status==='readyReviewer'?'b-reviewer':s.status==='readyDeveloper'?'b-developer':'b-none';
-      return `<div class="dash-card" style="margin-bottom:8px;">
-        <div class="dash-card-title">${v}</div>
-        <span class="badge ${cls}">${label}</span>
-        <p class="note">${s.total} comment(s) • ${s.fixed||0} fixed • ${s.approved||0} approved</p>
-      </div>`;
-    }).join('');
-    return `
-      <div class="app-group">
-        <div class="app-header ${isCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
-          <span class="chevron">▼</span>
-          <span class="app-name">${app} (${items.length} video${items.length!==1?'s':''})</span>
-          ${appSummaryBadgesHtml(summary)}
-        </div>
-        <div class="app-body ${isCollapsed?'collapsed':''}">${videoRows}</div>
-      </div>`;
-  }).join('');
-
-  el.innerHTML = controls + groupsHtml;
-}
-
-function rollbackVideo(app,vid){
-  if(role!=='Reviewer') return;
-  if(!confirm(`Rollback sign-off for ${app} / ${vid}?`)) return;
-  comments.filter(c=>c.Application===app&&c.VideoName===vid).forEach(c=>{ c.ApprovedByReviewer='No'; touchComment(c); });
-  renderDashboard(); renderCommentsTable();
-}
-function openVideoIn(tab,app,vid){
-  document.querySelector(`.tabs > button[data-tab="${tab}"]`).click();
-  const prefix=tab==='newreview'?'nr':'rv';
-  document.getElementById(prefix+'FilterApp').value=app; refreshVideoFilter(prefix);
-  document.getElementById(prefix+'FilterVideo').value=videoKey(app,vid);
-  if(prefix==='nr'){ nrVideoKey=videoKey(app,vid); loadVideoInto('nr',nrVideoKey); }
-  else { rvVideoKey=videoKey(app,vid); rvCurrentCommentId=null; loadVideoInto('rv',rvVideoKey); renderCommentsTable(); }
-}
-window.rollbackVideo=rollbackVideo;
-window.openVideoIn=openVideoIn;
-
-/* ============ REVIEW VALIDATIONS: GROUPED COMMENTS ============ */
-function roleBlockedChange(sel,revert,msg){ alert(msg); sel.value=revert; }
-function buildCommentRowHtml(c){
-  const shot=c.ScreenshotDataUrl?`<img src="${c.ScreenshotDataUrl}" class="thumb" onclick="openLightbox('${c.ScreenshotDataUrl}')">`:'';
-  const auditLine = c._LastModifiedBy
-    ? `<div class="audit-note">Last updated by ${c._LastModifiedBy}${c._LastModifiedAt ? ' on ' + fmtReadableDateTime(c._LastModifiedAt) : ''}</div>`
-    : '';
-  return `<tr data-id="${c.CommentID}">
-    <td><a href="#" class="jumpTime" data-app="${c.Application}" data-vid="${c.VideoName}" data-t="${c.Timestamp}" data-id="${c.CommentID}">${fmtTime(c.Timestamp)}</a></td>
-    <td>${shot}</td>
-    <td class="commentTextCell">${c.CommentText}${c.AutoDetected==='Yes'?' <span class="badge b-developer">auto</span>':''}${auditLine}</td>
-    <td>${c.InputType}</td>
-    <td class="fixedCell"></td><td class="apprCell"></td><td class="notesCell"></td><td class="actCell"></td>
-  </tr>`;
-}
-function renderCommentsTable(){
-  const isDev=role==='Developer', noVideo=!rvVideoKey;
-  document.getElementById('rvDevPrompt').style.display=(isDev&&noVideo)?'block':'none';
-  document.getElementById('rvPlayerWrap').style.display=(isDev&&noVideo)?'none':'flex';
-  document.getElementById('activeTableCard').style.display=(isDev&&noVideo)?'none':'block';
-  updateCurrentIssueLabel();
-  if(isDev&&noVideo){ document.getElementById('groupedCommentsContainer').innerHTML=''; renderSignedOffTable(); return; }
-
-  const appFilter=document.getElementById('rvFilterApp').value;
-  const videoFilterKey=document.getElementById('rvFilterVideo').value;
-  const statusFilter=document.getElementById('rvFilterStatus').value;
-
-  const byVideo={};
-  comments.forEach(c=>{ const key=videoKey(c.Application,c.VideoName); (byVideo[key]=byVideo[key]||[]).push(c); });
-
-  const appMap = {};
-  Object.entries(byVideo).forEach(([key, rows])=>{
-    const [app, vid] = key.split('|');
-    if(appFilter && app!==appFilter) return;
-    if(videoFilterKey && key!==videoFilterKey) return;
-    const s = computeVideoStatus(app, vid);
-    if(s.status === 'signedoff') return;
-    const filteredRows = rows.filter(c=> statusFilter==='all' || statusOf(c)===statusFilter);
-    if(!filteredRows.length) return;
-    filteredRows.sort((a,b)=>a.Timestamp-b.Timestamp);
-    (appMap[app] = appMap[app] || {}) [vid] = {rows: filteredRows, status: s};
-  });
-
-  const allStatuses = getAllVideoStatuses();
-  const container = document.getElementById('groupedCommentsContainer');
-  const appNames = Object.keys(appMap).sort();
-  if(!appNames.length){ container.innerHTML = '<p class="note">No active comments match the current filters.</p>'; renderSignedOffTable(); return; }
-
-  const rvAppKeys = appNames.map(app=>'rv_app_'+app);
-  const controls = `<div class="group-controls">
-    <button class="secondary" onclick='expandAllApps(${JSON.stringify(rvAppKeys)})'>Expand All</button>
-    <button class="secondary" onclick='collapseAllApps(${JSON.stringify(rvAppKeys)})'>Collapse All</button>
-  </div>`;
-
-  const groupsHtml = appNames.map(app=>{
-    const appKey = 'rv_app_'+app;
-    const isAppCollapsed = !expandedApps.has(appKey);
-    const summary = computeAppSummary(app, allStatuses);
-    const videoNames = Object.keys(appMap[app]).sort();
-    const videoBlocks = videoNames.map(vid=>{
-      const vidKey = 'rv_vid_'+videoKey(app,vid);
-      const isVidCollapsed = !expandedVideos.has(vidKey);
-      const {rows, status} = appMap[app][vid];
-      const label = status.status==='readyDeveloper'?'Ready for Developer':'Ready for Reviewer';
-      const cls = status.status==='readyDeveloper'?'b-developer':'b-reviewer';
-      return `
-        <div class="video-group">
-          <div class="video-header ${isVidCollapsed?'collapsed':''}" onclick="toggleVideo('${vidKey}')">
-            <span class="chevron">▼</span>
-            <span class="video-name">${vid}</span>
-            <span class="badge ${cls}">${label}</span>
-            <span class="video-meta">${rows.length} comment(s)</span>
-          </div>
-          <div class="video-body ${isVidCollapsed?'collapsed':''}">
-            <table>
-              <thead><tr>
-                <th>Time</th><th>Shot</th><th>Comment</th><th>Type</th>
-                <th>Fixed by NIIT<small>Developer only</small></th>
-                <th>Approved<small>Reviewer only</small></th>
-                <th>Follow-up Notes</th><th>Actions</th>
-              </tr></thead>
-              <tbody>${rows.map(buildCommentRowHtml).join('')}</tbody>
-            </table>
-          </div>
-        </div>`;
-    }).join('');
-    return `
-      <div class="app-group">
-        <div class="app-header ${isAppCollapsed?'collapsed':''}" onclick="toggleApp('${appKey}')">
-          <span class="chevron">▼</span>
-          <span class="app-name">${app}</span>
-          ${appSummaryBadgesHtml(summary)}
-        </div>
-        <div class="app-body ${isAppCollapsed?'collapsed':''}">${videoBlocks}</div>
-      </div>`;
-  }).join('');
-
-  container.innerHTML = controls + groupsHtml;
-
-  container.querySelectorAll('tr[data-id]').forEach(tr=>{
-    const id = tr.dataset.id;
-    const c = comments.find(x=>x.CommentID===id);
-    if(!c) return;
-
-    const fixedSel=document.createElement('select'); fixedSel.innerHTML='<option>No</option><option>Yes</option>'; fixedSel.value=c.FixedByNIIT||'No';
-    fixedSel.onchange=()=>{ if(role!=='Developer'){ roleBlockedChange(fixedSel,c.FixedByNIIT||'No','Only Developers can update Fixed by NIIT.'); return; } c.FixedByNIIT=fixedSel.value; touchComment(c); renderCommentsTable(); renderDashboard(); };
-    tr.querySelector('.fixedCell').appendChild(fixedSel);
-
-    const apprSel=document.createElement('select'); apprSel.innerHTML='<option>No</option><option>Yes</option>'; apprSel.value=c.ApprovedByReviewer||'No';
-    apprSel.onchange=()=>{ if(role!=='Reviewer'){ roleBlockedChange(apprSel,c.ApprovedByReviewer||'No','Only Reviewers can update Approved by Reviewer.'); return; } c.ApprovedByReviewer=apprSel.value; touchComment(c); renderCommentsTable(); renderDashboard(); };
-    tr.querySelector('.apprCell').appendChild(apprSel);
-
-    const notesInput=document.createElement('input'); notesInput.type='text'; notesInput.className='followup'; notesInput.placeholder='Follow-up note...'; notesInput.value=c.FollowUpNotes||'';
-    notesInput.onchange=()=>{ c.FollowUpNotes=notesInput.value; touchComment(c); renderCommentsTable(); };
-    tr.querySelector('.notesCell').appendChild(notesInput);
-
-    if(role==='Reviewer'){
-      const editBtn=document.createElement('button'); editBtn.className='secondary'; editBtn.textContent='Edit';
-      editBtn.onclick=()=>editCommentInline(tr,c);
-      const delBtn=document.createElement('button'); delBtn.className='danger'; delBtn.style.marginLeft='4px'; delBtn.textContent='Delete';
-      delBtn.onclick=()=>{
-        if(!confirm('Delete permanently?')) return;
-        deletedCommentIds.add(c.CommentID);
-        comments=comments.filter(x=>x.CommentID!==c.CommentID);
-        if(rvCurrentCommentId===c.CommentID) rvCurrentCommentId=null;
-        renderCommentsTable(); renderDashboard();
+    const tdActions = document.createElement('td');
+    if(state.role === 'Reviewer'){
+      const editBtn = document.createElement('button'); editBtn.className='btn secondary sm'; editBtn.textContent='Edit'; editBtn.disabled = videoLock;
+      editBtn.onclick = ()=>{
+        if(isLockedByOtherRole(app,video)){ alert('This video is locked by the other role right now.'); return; }
+        const newText = prompt('Edit comment text:', c.CommentText);
+        if(newText !== null){
+          c.CommentText = newText; touchComment(c);
+          tryAcquireLockForAction(app, video);
+          logActivity('Edited', app, video, `Comment at ${c.TimestampDisplay} text updated`);
+          if(state.usingFSApi) writeCycle();
+          renderAll();
+        }
       };
-      tr.querySelector('.actCell').appendChild(editBtn);
-      tr.querySelector('.actCell').appendChild(delBtn);
+      const delBtn = document.createElement('button'); delBtn.className='btn danger sm'; delBtn.textContent='Delete'; delBtn.disabled = videoLock;
+      delBtn.onclick = ()=>{
+        if(isLockedByOtherRole(app,video)){ alert('This video is locked by the other role right now.'); return; }
+        if(confirm('Delete this comment?')){
+          state.deletedIds.add(c.CommentID);
+          state.comments = state.comments.filter(x=>x.CommentID !== c.CommentID);
+          tryAcquireLockForAction(app, video);
+          logActivity('Deleted', app, video, `Comment at ${c.TimestampDisplay} deleted`);
+          if(state.usingFSApi) writeCycle();
+          renderAll();
+        }
+      };
+      tdActions.appendChild(editBtn); tdActions.appendChild(delBtn);
     }
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
   });
-  container.querySelectorAll('.jumpTime').forEach(a=>{
-    a.onclick=(e)=>{ e.preventDefault(); jumpToComment(a.dataset.app,a.dataset.vid,parseFloat(a.dataset.t),a.dataset.id); };
-  });
-
-  renderSignedOffTable();
-}
-function renderSignedOffTable(){
-  const appFilter=document.getElementById('rvFilterApp').value;
-  const videoFilterKey=document.getElementById('rvFilterVideo').value;
-  const byVideo={};
-  comments.forEach(c=>{ const key=videoKey(c.Application,c.VideoName); (byVideo[key]=byVideo[key]||[]).push(c); });
-  const signedOff=[];
-  Object.entries(byVideo).forEach(([key, rows])=>{
-    const [app,vid]=key.split('|');
-    if(appFilter && app!==appFilter) return;
-    if(videoFilterKey && key!==videoFilterKey) return;
-    const s=computeVideoStatus(app,vid);
-    if(s.status==='signedoff') signedOff.push({app,vid,s});
-  });
-  const sotbody=document.getElementById('signedOffTableBody'); sotbody.innerHTML='';
-  if(!signedOff.length){ sotbody.innerHTML='<tr><td colspan="5" class="note">No videos signed off yet.</td></tr>'; return; }
-  signedOff.forEach(({app,vid,s})=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${app}</td><td>${vid}</td><td>${s.total}</td><td>${s.approved}</td><td></td>`;
-    const viewBtn=document.createElement('button'); viewBtn.className='secondary'; viewBtn.textContent='View';
-    viewBtn.onclick=()=>{ document.getElementById('rvFilterApp').value=app; refreshVideoFilter('rv'); document.getElementById('rvFilterVideo').value=videoKey(app,vid); rvVideoKey=videoKey(app,vid); loadVideoInto('rv',rvVideoKey); renderCommentsTable(); };
-    tr.children[4].appendChild(viewBtn);
-    if(role==='Reviewer'){
-      const rb=document.createElement('button'); rb.className='danger'; rb.style.marginLeft='6px'; rb.textContent='Rollback';
-      rb.onclick=()=>rollbackVideo(app,vid);
-      tr.children[4].appendChild(rb);
-    }
-    sotbody.appendChild(tr);
-  });
-}
-function jumpToComment(app,vid,time,commentId){
-  const key=videoKey(app,vid);
-  document.getElementById('rvFilterApp').value=app; refreshVideoFilter('rv');
-  document.getElementById('rvFilterVideo').value=key;
-  const p=document.getElementById('player_rv'); rvCurrentCommentId=commentId;
-  if(rvVideoKey!==key){
-    rvVideoKey=key; loadVideoInto('rv',key);
-    const onLoaded=()=>{ p.currentTime=time; p.pause(); p.removeEventListener('loadeddata',onLoaded); updateCurrentIssueLabel(); };
-    p.addEventListener('loadeddata',onLoaded);
-  } else { p.currentTime=time; p.pause(); updateCurrentIssueLabel(); }
-  renderCommentsTable();
-}
-window.jumpToComment=jumpToComment;
-function editCommentInline(tr,c){
-  const cell=tr.querySelector('.commentTextCell'); const original=c.CommentText;
-  cell.innerHTML=`<textarea class="edit-inline" rows="2">${original}</textarea><div style="margin-top:4px;"><button class="secondary saveEdit">Save</button> <button class="secondary cancelEdit">Cancel</button></div>`;
-  cell.querySelector('.saveEdit').onclick=()=>{ c.CommentText=cell.querySelector('textarea').value.trim()||original; touchComment(c); renderCommentsTable(); };
-  cell.querySelector('.cancelEdit').onclick=()=>renderCommentsTable();
+  table.appendChild(tbody);
+  return table;
 }
 
-/* ============ AUTO-SCAN ============ */
-function wireAutoScan(prefix){
-  document.getElementById('btnAutoScan_'+prefix).onclick=async()=>{
-    if(role!=='Reviewer'){
-      alert('Developers cannot run Auto-Scan or add comments. Please use Review Validations to mark Fixed by NIIT and add Follow-up Notes.');
+function openLightbox(src){
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox';
+  overlay.innerHTML = `<img src="${src}">`;
+  overlay.onclick = ()=> overlay.remove();
+  document.body.appendChild(overlay);
+}
+
+/* ============================= REVIEW COMPLETE ============================= */
+function stampReviewComplete(prefix){
+  if(state.role !== 'Reviewer' && state.role !== 'Developer'){ return; }
+
+  const stateObj = prefix === 'nr' ? nrPlayerState : rvPlayerState;
+  const app = stateObj.app, video = stateObj.video;
+
+  if(!app || !video){
+    alert('Please select/load a video first.');
+    return;
+  }
+
+  const actionLabel = (prefix === 'rv' && state.role === 'Developer') ? 'fix' : 'review';
+  if(!confirm(`Mark ${actionLabel} complete and sync now? This will release your lock on this video.`)) return;
+
+  state.config.ReviewCompletedAt = new Date().toISOString();
+  state.config.ReviewCompletedBy = state.userName;
+
+  releaseLock(app, video);
+  logActivity('Review Complete', app, video, `Stamped by ${state.userName} (${state.role}); lock released`);
+
+  if(recordingState.nr.active) stopRecording('nr');
+  if(recordingState.rv.active) stopRecording('rv');
+  if(state.usingFSApi) writeCycle();
+  renderAll();
+}
+document.getElementById('nr-reviewCompleteBtn').onclick = ()=> stampReviewComplete('nr');
+document.getElementById('rv-reviewCompleteBtn').onclick = ()=> stampReviewComplete('rv');
+
+/* ============================= LIVE SYNC ============================= */
+let readTimer = null, writeTimer = null;
+let nextReadIn = 2, nextWriteIn = 3;
+let syncMessageOverride = null, syncMessageTimeout = null;
+let writeInFlight = false;
+
+function isUserTyping(){
+  const active = document.activeElement;
+  return active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && active.type==='text'));
+}
+function updateSyncBannerText(){
+  if(syncMessageOverride) return;
+  document.getElementById('syncText').textContent = `Next read: ${nextReadIn}s / Next write: ${nextWriteIn}s`;
+}
+setInterval(()=>{
+  if(!state.usingFSApi) return;
+  nextReadIn = Math.max(0, nextReadIn - 1); nextWriteIn = Math.max(0, nextWriteIn - 1);
+  updateSyncBannerText();
+}, 1000);
+
+function scheduleReadCycle(){
+  readTimer = setTimeout(async ()=>{
+    if(isUserTyping()){ nextReadIn = 2; scheduleReadCycle(); return; }
+    await readCycle(); nextReadIn = 2; scheduleReadCycle();
+  }, 2000);
+}
+function scheduleWriteCycle(){
+  writeTimer = setTimeout(async ()=>{
+    if(isUserTyping()){ nextWriteIn = 3; scheduleWriteCycle(); return; }
+    await writeCycle(); nextWriteIn = 3; scheduleWriteCycle();
+  }, 3000);
+}
+
+function mergeDiskIntoState(wb){
+  let updates = 0;
+  const wsC = wb.Sheets['Comments'];
+  const diskRows = wsC ? XLSX.utils.sheet_to_json(wsC, {defval:''}) : [];
+  const byId = new Map(state.comments.map(c=>[c.CommentID, c]));
+  diskRows.forEach(dr=>{
+    dr.Timestamp = parseFlexibleTimestamp(dr.Timestamp);
+    dr._LastModified = Number(dr._LastModified)||0;
+    if(state.deletedIds.has(dr.CommentID)) return;
+    const existing = byId.get(dr.CommentID);
+    if(!existing){ state.comments.push(dr); byId.set(dr.CommentID, dr); updates++; }
+    else if(dr._LastModified > (existing._LastModified||0)){ Object.assign(existing, dr); updates++; }
+  });
+
+  const wsL = wb.Sheets['Locks'];
+  const diskLocks = (wsL ? XLSX.utils.sheet_to_json(wsL, {defval:''}) : []).map(l=>({...l, ExpiresAt:Number(l.ExpiresAt)||0}));
+  mergeLocks(diskLocks);
+
+  const wsA = wb.Sheets['Activity'];
+  const diskActivity = (wsA ? XLSX.utils.sheet_to_json(wsA, {defval:''}) : []).map(a=>({...a, TimestampEpoch:Number(a.TimestampEpoch)||0}));
+  mergeActivity(diskActivity);
+
+  return updates;
+}
+function mergeActivity(diskActivity){
+  const byId = new Map(state.activityLog.map(a=>[a.ActivityID, a]));
+  diskActivity.forEach(a=>{ if(!byId.has(a.ActivityID)) byId.set(a.ActivityID, a); });
+  state.activityLog = [...byId.values()].sort((a,b)=> b.TimestampEpoch - a.TimestampEpoch).slice(0,300);
+}
+
+async function readCycle(){
+  try{
+    const file = await state.fileHandle.getFile();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const updates = mergeDiskIntoState(wb);
+    renderAll();
+    showSyncMessage(updates > 0 ? `✅ Read successful — synced ${updates} update(s)` : '✅ Read successful — no changes');
+  }catch(e){
+    console.error('Read cycle failed', e);
+    showSyncMessage('❌ Read failed: ' + e.message, true);
+  }
+}
+
+async function writeCycle(){
+  if(writeInFlight) return;
+  writeInFlight = true;
+  try{
+    const perm = await state.fileHandle.queryPermission({mode:'readwrite'});
+    if(perm !== 'granted'){
+      document.getElementById('resumeSyncBanner').style.display = 'flex';
+      writeInFlight = false;
       return;
     }
-    const videoKeyVal=prefix==='nr'?nrVideoKey:rvVideoKey;
-    const player=document.getElementById('player_'+prefix);
-    if(!videoKeyVal||!player.src){ alert('Browse/select a video first.'); return; }
-    player.pause();
-    const duration=player.duration||0, step=Math.max(2,duration/40);
-    pendingObservations[prefix]=[];
-    const btn=document.getElementById('btnAutoScan_'+prefix);
-    btn.disabled=true; btn.textContent='🔍 Scanning...';
-    for(let t=0;t<duration;t+=step){
-      player.currentTime=t;
-      await new Promise(r=>player.onseeked=r);
-      const found=await scanFrameCorners(player);
-      if(found){
-        const shot=captureFrameThumbnail(player);
-        pendingObservations[prefix].push({id:uid(), time:t, text:found, screenshot:shot, decided:false});
-      }
-    }
-    btn.disabled=false; btn.textContent='🔍 Auto-Scan for URLs';
-    renderObservations(prefix);
-    alert(`Auto-scan complete. ${pendingObservations[prefix].length} observation(s) found.`);
-  };
-}
-wireAutoScan('nr'); wireAutoScan('rv');
-function renderObservations(prefix){
-  const card=document.getElementById('obsCard_'+prefix); const list=document.getElementById('obsList_'+prefix);
-  const obs=pendingObservations[prefix].filter(o=>!o.decided);
-  if(!pendingObservations[prefix].length){ card.style.display='none'; return; }
-  card.style.display='block';
-  if(!obs.length){ list.innerHTML='<p class="note">All observations reviewed.</p>'; return; }
-  list.innerHTML='';
-  obs.forEach(o=>{
-    const div=document.createElement('div'); div.className='obs-item';
-    div.innerHTML=(o.screenshot?`<img src="${o.screenshot}">`:'')+`<div style="flex:1;"><b>${fmtTime(o.time)}</b> — ${o.text}<div class="obs-actions"></div></div>`;
-    const actions=div.querySelector('.obs-actions');
-    const acceptBtn=document.createElement('button'); acceptBtn.textContent='Accept';
-    acceptBtn.onclick=()=>{
-      if(role!=='Reviewer') return;
-      const key=prefix==='nr'?nrVideoKey:rvVideoKey; const [app,vid]=key.split('|');
-      const newComment = {CommentID:uid(), Application:app, VideoName:vid, Timestamp:o.time, TimestampDisplay:fmtTime(o.time),
-        Frame:Math.round(o.time*DEFAULT_FPS), CommentText:`Possible URL/link detected: ${o.text}`, InputType:'Auto',
-        CreatedBy:currentUserName||role, CreatedAt:nowIso(), FixedByNIIT:'No', ApprovedByReviewer:'No', AutoDetected:'Yes', FollowUpNotes:'', ScreenshotDataUrl:o.screenshot||''};
-      touchComment(newComment);
-      comments.push(newComment);
-      o.decided=true; renderObservations(prefix);
-      if(prefix==='nr') renderNrRecentTable();
-      renderCommentsTable(); renderDashboard();
-    };
-    const rejectBtn=document.createElement('button'); rejectBtn.className='secondary'; rejectBtn.textContent='Reject';
-    rejectBtn.onclick=()=>{ o.decided=true; renderObservations(prefix); };
-    actions.appendChild(acceptBtn); actions.appendChild(rejectBtn);
-    list.appendChild(div);
-  });
-}
-async function scanFrameCorners(player){
-  const canvas=document.createElement('canvas'); canvas.width=player.videoWidth; canvas.height=player.videoHeight;
-  canvas.getContext('2d').drawImage(player,0,0,canvas.width,canvas.height);
-  const cw=canvas.width*0.3, ch=canvas.height*0.2;
-  const corners=[[0,0],[canvas.width-cw,0],[0,canvas.height-ch],[canvas.width-cw,canvas.height-ch]];
-  for(const [x,y] of corners){
-    const crop=document.createElement('canvas'); crop.width=cw; crop.height=ch;
-    crop.getContext('2d').drawImage(canvas,x,y,cw,ch,0,0,cw,ch);
-    try{ const {data:{text}}=await Tesseract.recognize(crop,'eng'); const m=text.match(/\b(?:https?:\/\/|www\.)[^\s]+/i); if(m) return m[0]; }catch(e){}
+    document.getElementById('resumeSyncBanner').style.display = 'none';
+
+    try{
+      const file = await state.fileHandle.getFile();
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      mergeDiskIntoState(wb);
+    }catch(e){ console.warn('Pre-write merge read failed, proceeding with in-memory state only', e); }
+
+    renewAllMyLocks();
+
+    const wbOut = buildWorkbook(state.comments, state.config, state.locks, state.activityLog);
+    const arrBuf = XLSX.write(wbOut, {type:'array', bookType:'xlsx'});
+    const writable = await state.fileHandle.createWritable();
+    await writable.write(arrBuf);
+    await writable.close();
+    state.deletedIds.clear();
+    state.releasedLocks.clear();
+    showSyncMessage('✅ Write successful');
+    renderAll();
+  }catch(e){
+    console.error('Write cycle failed', e);
+    showSyncMessage('❌ Write failed: ' + e.message, true);
   }
-  return null;
+  writeInFlight = false;
+}
+
+document.getElementById('resumeSyncBtn').onclick = async ()=>{
+  try{
+    await state.fileHandle.requestPermission({mode:'readwrite'});
+    document.getElementById('resumeSyncBanner').style.display = 'none';
+    writeCycle();
+  }catch(e){ console.error(e); }
+};
+
+function showSyncMessage(msg, isError){
+  syncMessageOverride = msg;
+  const el = document.getElementById('syncText');
+  el.textContent = msg; el.style.color = isError ? '#FCA5A5' : '';
+  clearTimeout(syncMessageTimeout);
+  syncMessageTimeout = setTimeout(()=>{ syncMessageOverride = null; el.style.color = ''; updateSyncBannerText(); }, 2500);
+}
+
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && state.usingFSApi) readCycle(); });
+window.addEventListener('focus', ()=>{ if(state.usingFSApi) readCycle(); });
+
+/* ============================= RENDER ALL ============================= */
+function renderAll(){
+  const activeTab = document.querySelector('nav.tabs button.active')?.dataset.tab;
+  if(activeTab === 'dashboard') renderDashboard();
+  if(activeTab === 'newreview') renderNewReview();
+  if(activeTab === 'validations') renderValidations();
+  populateAppFilter('nr-appFilter');
+  populateAppFilter('rv-appFilter');
+}
+
+if(!window.showOpenFilePicker){
+  console.warn('File System Access API not supported — live sync will be disabled; use manual import/export.');
 }
 </script>
 </body>
