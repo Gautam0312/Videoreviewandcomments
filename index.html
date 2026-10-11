@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -128,17 +143,39 @@ async function pickFile(create) {
   }
 }
 
+/* loadState() safely handles corrupted/incomplete JSON without crashing.
+   On parse failure, the last known-good in-memory state is preserved. */
 async function loadState() {
   if (useLocalStorageFallback) {
     const saved = localStorage.getItem('vrt_data');
-    if (saved) state = JSON.parse(saved);
+    if (saved) {
+      try {
+        state = JSON.parse(saved);
+      } catch (e) {
+        console.error('JSON parse error (localStorage):', e);
+        toast('⚠️ Data appears corrupted — keeping last known good data in memory.');
+      }
+    }
     return;
   }
   if (!fileHandle) return;
-  const file = await fileHandle.getFile();
-  const text = await file.text();
-  state = text ? JSON.parse(text) : { videos: [], __lastModified: null };
-  state.__lastModified = file.lastModified;
+  let file, text;
+  try {
+    file = await fileHandle.getFile();
+    text = await file.text();
+  } catch (e) {
+    console.error('Error reading file:', e);
+    toast('⚠️ Could not read the data file. Please check it is still accessible.');
+    return;
+  }
+  try {
+    const parsed = text ? JSON.parse(text) : { videos: [], __lastModified: null };
+    state = parsed;
+    state.__lastModified = file.lastModified;
+  } catch (e) {
+    console.error('JSON parse error (file):', e);
+    toast('⚠️ Data file appears corrupted or incomplete — changes were not loaded. Please check the file.');
+  }
 }
 
 async function saveState() {
@@ -160,14 +197,22 @@ async function heartbeat() {
   if (useLocalStorageFallback) {
     const saved = localStorage.getItem('vrt_data');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.__lastModified !== state.__lastModified) { state = parsed; changed = true; }
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.__lastModified !== state.__lastModified) { state = parsed; changed = true; }
+      } catch (e) {
+        console.error('JSON parse error (heartbeat, localStorage):', e);
+      }
     }
   } else if (fileHandle) {
     try {
       const file = await fileHandle.getFile();
-      if (file.lastModified !== state.__lastModified) { await loadState(); changed = true; }
-    } catch (e) { /* ignore */ }
+      if (file.lastModified !== state.__lastModified) {
+        const before = state.__lastModified;
+        await loadState();
+        if (state.__lastModified !== before) changed = true;
+      }
+    } catch (e) { /* ignore transient read errors */ }
   }
   if (!changed) return;
   toast('Synced latest changes from file');
@@ -409,6 +454,9 @@ screens.howto = function () {
 
     <h3>Audit Trail</h3>
     <p>Every meaningful action — locks acquired/released, status changes, comments added/deleted, fixes marked, follow-ups, rollbacks — is recorded with who did it and when. Click "Audit Trail" next to any video in the Dashboard, or from within a Review/Fix screen, to view its full history.</p>
+
+    <h3>Deleting Comments</h3>
+    <p>Deleting a comment now asks for confirmation first, since this action cannot be undone. Review the comment text shown in the confirmation prompt carefully before confirming.</p>
   </div>
 
   <div class="flow-wrap">
@@ -852,10 +900,6 @@ const actions = {
     btn.textContent = '⏹';
   },
 
-  /* =========================================================
-     ENHANCED: higher resolution + higher JPEG quality capture
-     (This is the ONLY functional change in this version.)
-     ========================================================= */
   async submitComment() {
     const video = document.getElementById('reviewVideo');
     const textEl = document.getElementById('commentText');
@@ -865,12 +909,10 @@ const actions = {
     const v = findVideo(activeVideoId);
     const currentTimeAtSubmit = video.currentTime;
     const canvas = document.createElement('canvas');
-    // Higher resolution cap (was 480px) — preserves aspect ratio, capped at native size
     const MAX_W = 1280;
     canvas.width = Math.min(video.videoWidth || MAX_W, MAX_W);
     canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    // Higher JPEG quality (was 0.6) for much sharper screenshots
     const screenshotDataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const commentType = recognition ? 'voice' : 'text';
     v.comments.push({
@@ -900,7 +942,11 @@ const actions = {
   async deleteComment(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
-    if (c) logAudit(v, 'Comment Deleted', `at ${fmtTime(c.time)}: "${c.text.slice(0,80)}${c.text.length>80?'...':''}"`);
+    if (!c) return;
+    const preview = c.text.length > 100 ? c.text.slice(0, 100) + '...' : c.text;
+    const confirmDelete = confirm(`Are you sure you want to delete this comment?\n\n"${preview}"\n\nThis action cannot be undone.`);
+    if (!confirmDelete) return;
+    logAudit(v, 'Comment Deleted', `at ${fmtTime(c.time)}: "${preview}"`);
     v.comments = v.comments.filter(c => c.id !== id);
     await saveState();
     renderCommentsPanel();
@@ -1048,7 +1094,6 @@ const actions = {
           const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
           const urls = extractUrls(text);
           if (urls.length) {
-            // Higher JPEG quality for the stored observation screenshot (was 0.6)
             pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: canvas.toDataURL('image/jpeg', 0.92) });
           }
         } catch (e) { /* ignore OCR error for this region */ }
@@ -1123,3 +1168,10 @@ render();
 </script>
 </body>
 </html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
