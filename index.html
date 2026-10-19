@@ -1,19 +1,4 @@
-
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<style>
-								body {
-									background-color: white; /* Ensure the iframe has a white background */
-								}
-
-								
-							</style>
-                        </head>
-                        <body>
-                            <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -75,6 +60,7 @@
   .perm-table td, .perm-table th{font-size:13px}
   .audit-row td{font-size:13px}
   .audit-action{font-weight:600;color:#1d4ed8}
+  .url-link{color:#2563eb;text-decoration:underline;word-break:break-all;font-size:13px}
 </style>
 </head>
 <body>
@@ -103,7 +89,7 @@ let statusFilters = { app:'', status:'', videoSearch:'' };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const nowStr = () => new Date().toLocaleString();
 
-/* ============== AUDIT TRAIL HELPER (additive, non-breaking) ============== */
+/* ============== AUDIT TRAIL HELPER ============== */
 function logAudit(v, action, details) {
   if (!v.auditLog) v.auditLog = [];
   v.auditLog.push({
@@ -143,8 +129,6 @@ async function pickFile(create) {
   }
 }
 
-/* loadState() safely handles corrupted/incomplete JSON without crashing.
-   On parse failure, the last known-good in-memory state is preserved. */
 async function loadState() {
   if (useLocalStorageFallback) {
     const saved = localStorage.getItem('vrt_data');
@@ -274,18 +258,23 @@ screens.init = function () {
 };
 
 screens.dashboard = function () {
+  const showUrlColumn = currentUser.role === 'reviewer';
   const rows = state.videos.map(v => {
     const act = getAction(v);
+    const canEditName = currentUser.role === 'developer' && v.addedBy === currentUser.name;
     return `<tr>
+      <td>${v.appName || 'NA'}</td>
       <td>${v.name}</td>
       <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span></td>
       <td>${v.round}</td>
       <td>${v.lock && v.lock.role ? `<span class="lockmsg">🔒 ${v.lock.role} (${v.lock.by})</span>` : '—'}</td>
       <td>${v.comments.length}</td>
       <td>${v.addedBy} / ${v.addedAt}</td>
+      ${showUrlColumn ? `<td>${v.videoUrl ? `<a class="url-link" href="${v.videoUrl}" target="_blank" rel="noopener">${v.videoUrl}</a>` : 'NA'}</td>` : ''}
       <td class="flexgap">
         ${act.disabled ? `<button disabled>${act.label}</button>` : `<button data-action="${act.action}" data-id="${v.id}">${act.label}</button>`}
         <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
+        ${canEditName ? `<button class="secondary" data-action="openEditName" data-id="${v.id}">Edit Name</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -306,8 +295,12 @@ screens.dashboard = function () {
       ${currentUser.role === 'developer' ? `<button data-action="openAddVideo">+ Add New Video</button>` : ''}
     </div>
     <table>
-      <thead><tr><th>Name</th><th>Status</th><th>Round</th><th>Lock</th><th>#Comments</th><th>Added By</th><th>Action</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan=7>No videos yet.</td></tr>'}</tbody>
+      <thead><tr>
+        <th>Application</th><th>Name</th><th>Status</th><th>Round</th><th>Lock</th><th>#Comments</th><th>Added By</th>
+        ${showUrlColumn ? '<th>Video URL</th>' : ''}
+        <th>Action</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan=${showUrlColumn ? 9 : 8}>No videos yet.</td></tr>`}</tbody>
     </table>
   </div>`;
 };
@@ -401,62 +394,51 @@ screens.howto = function () {
 
   <div style="background:#fff;padding:20px;border-radius:8px;margin-bottom:16px">
     <h2>Overview</h2>
-    <p>This tool helps Reviewers and Developers collaborate on fixing issues found in review videos (e.g. UI walkthroughs), entirely from your browser — no server required. All data (comments, statuses, locks, audit history) is stored in a shared JSON data file that both roles open, and the tool auto-syncs changes using a heartbeat check every few seconds.</p>
+    <p>This tool helps Reviewers and Developers collaborate on fixing issues found in review videos, entirely from your browser — no server required. All data (comments, statuses, locks, audit history) is stored in a shared JSON data file that both roles open, and the tool auto-syncs changes using a heartbeat check every few seconds.</p>
 
     <h3>Getting Started</h3>
     <ol>
       <li>On the launch screen, choose your role: <b>Reviewer</b> or <b>Developer</b>.</li>
-      <li>Enter your name (required — it's used to tag comments, locks, and audit entries).</li>
-      <li>Open the shared data file (JSON). If this is the very first time, use "Create a new data file" instead.</li>
+      <li>Enter your name (required).</li>
+      <li>Open the shared data file (JSON), or create a new one on first-time setup.</li>
       <li>Click Continue to reach your Dashboard / Video Queue.</li>
     </ol>
 
     <h3>Developer: Adding a Video</h3>
-    <p>Developers add a new video entry (Application Name + Video Name) to the queue once it's ready for review. This creates a "Pending Review" entry visible to the Reviewer.</p>
+    <p>Developers add a new video entry (Application Name + Video Name + optional Video URL) to the queue once it's ready for review. The developer who created an entry can later rename it using the "Edit Name" button in the Video Queue.</p>
 
     <h3>Reviewer: Logging Issues (Round 1)</h3>
     <ol>
-      <li>Click "Start Review" — this locks the entry for you exclusively.</li>
-      <li>Browse and select the local MP4 file.</li>
-      <li>Optionally click "Auto Review for URLs" — it scans every 5 seconds for on-screen URLs and raises them as observations. Accept or reject each one.</li>
-      <li>Add your own comments by typing or using the 🎤 mic button. Clicking into the comment box auto-pauses the video. The comment is logged with timestamp, screenshot, text, and your name/time. The field clears automatically after adding, ready for the next one.</li>
-      <li>All logged comments appear in the right-hand panel as "open" items.</li>
-      <li>Click "Review Complete" when done — this releases the lock and sends the video to the Developer.</li>
+      <li>Click "Start Review" — locks the entry for you exclusively.</li>
+      <li>Browse and select the local MP4 file, or let the tool auto-load from the Video URL if one was provided. The Video URL (if provided) is also shown in the Video Queue and on this screen as a clickable link you can open in a new tab.</li>
+      <li>Optionally click "Auto Review for URLs" to scan for on-screen URLs. Accept or reject each one.</li>
+      <li>Add comments by typing or using the 🎤 mic button. Clicking into the comment box auto-pauses the video. The field clears automatically after adding.</li>
+      <li>Click "Review Complete" when done.</li>
     </ol>
 
     <h3>Developer: Fixing Issues</h3>
     <ol>
       <li>Click "Start Fix" — locks the entry for you.</li>
-      <li>Browse the (fixed) video locally if needed to confirm issues.</li>
-      <li>For each comment, mark it "Addressed" or "Can't Fix". Addressed items move to a read-only panel under the video, keeping your open task list (right column) focused.</li>
-      <li>Once all comments are marked, click "All Fixes Completed" — you'll be asked to confirm the updated MP4 is uploaded to SharePoint. Confirming releases the lock and sends it back to the Reviewer.</li>
+      <li>Mark each comment "Addressed" or "Can't Fix".</li>
+      <li>Once all comments are marked, click "All Fixes Completed" — confirm the SharePoint upload, and optionally enter/update the URL to fetch the latest MP4. This releases the lock and sends it back to the Reviewer.</li>
     </ol>
 
     <h3>Reviewer: Validation Rounds</h3>
     <ol>
-      <li>Click "Start Validation Rx" — this increments the round and locks the video for you.</li>
-      <li>Browse the updated MP4 file.</li>
-      <li>Use Prev/Next to jump between comments. For each: "Approve Fix" if resolved, or "Add Follow-up" if not — follow-ups reopen the item for the developer.</li>
-      <li>"Mark All as Fixed/Approved" quickly approves every developer-addressed item in bulk.</li>
-      <li>You can also add brand-new comments during validation, same as Round 1.</li>
-      <li>Click "Review Complete" — if everything is approved, the video becomes "Signed Off". Otherwise it's sent back to the Developer for another round.</li>
+      <li>Click "Start Validation Rx" — increments the round and locks the video for you.</li>
+      <li>Browse the updated video, or let it auto-load from the latest Video URL if the developer provided one.</li>
+      <li>Approve fixes or add follow-ups. Add new comments if needed.</li>
+      <li>Click "Review Complete" — if everything is approved, the video is Signed Off; otherwise it returns to the Developer.</li>
     </ol>
 
     <h3>Rollback</h3>
-    <p>Only the Reviewer can roll back a Signed Off video to the Fix stage (e.g. if an issue is found post sign-off). This starts a new round automatically — no previous comments/history are lost.</p>
+    <p>Only the Reviewer can roll back a Signed Off video to the Fix stage. This starts a new round automatically.</p>
 
-    <h3>Open vs. Resolved Comments</h3>
-    <p>To reduce clutter, each review/fix screen splits comments into two zones:</p>
-    <ul>
-      <li><b>Right column</b> — comments still needing action (open items you should focus on).</li>
-      <li><b>Left column, under the video</b> — comments already approved (Reviewer) or addressed (Developer), shown read-only for reference.</li>
-    </ul>
-
-    <h3>Audit Trail</h3>
-    <p>Every meaningful action — locks acquired/released, status changes, comments added/deleted, fixes marked, follow-ups, rollbacks — is recorded with who did it and when. Click "Audit Trail" next to any video in the Dashboard, or from within a Review/Fix screen, to view its full history.</p>
+    <h3>Video URL (Fetch Latest MP4)</h3>
+    <p>Developers can optionally provide a URL pointing to the latest MP4 file — when creating a new video entry, and again whenever all fixes are completed. Reviewers can see this URL in the Video Queue and on the Review screen as a clickable link, and the Review/Fix screens will also try to auto-load the video from it; "Browse Video File" always remains available as an alternative.</p>
 
     <h3>Deleting Comments</h3>
-    <p>Deleting a comment now asks for confirmation first, since this action cannot be undone. Review the comment text shown in the confirmation prompt carefully before confirming.</p>
+    <p>Deleting a comment now asks for confirmation first, since this action cannot be undone.</p>
   </div>
 
   <div class="flow-wrap">
@@ -465,28 +447,25 @@ screens.howto = function () {
       <div class="flow-box">Developer adds Video<br><span class="small">(Pending Review)</span></div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Review<br><span class="small">🔒 Locked for Reviewer</span></div>
-      <div class="flow-note">Browse video, auto-scan URLs, log comments (text/voice)</div>
+      <div class="flow-note">Browse/auto-load video, auto-scan URLs, log comments</div>
       <div class="flow-arrow">↓</div>
-      <div class="flow-box">Reviewer: Review Complete<br><span class="small">(Status: Reviewed)</span></div>
+      <div class="flow-box">Reviewer: Review Complete</div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Developer: Start Fix<br><span class="small">🔒 Locked for Developer</span></div>
       <div class="flow-note">Mark each comment Addressed / Can't Fix</div>
       <div class="flow-arrow">↓</div>
-      <div class="flow-box">Developer: All Fixes Completed<br><span class="small">(Confirm SharePoint upload)</span></div>
+      <div class="flow-box">Developer: All Fixes Completed<br><span class="small">(Confirm upload + optional video URL)</span></div>
       <div class="flow-arrow">↓</div>
-      <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Validation (Round+1)<br><span class="small">🔒 Locked for Reviewer</span></div>
-      <div class="flow-note">Approve fixes or raise follow-ups; add new comments if needed</div>
+      <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Validation (Round+1)</div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box">Reviewer: Review Complete</div>
       <div class="flow-arrow">↓</div>
       <div style="display:flex;gap:40px;align-items:flex-start">
         <div class="flow-col">
           <div class="flow-box" style="border-color:#16a34a;background:#dcfce7">All approved →<br>SIGNED OFF ✅</div>
-          <div class="flow-note">Reviewer may later Rollback (starts new round, locks reopened)</div>
         </div>
         <div class="flow-col">
-          <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Open items remain →<br>Back to Developer (Fix)</div>
-          <div class="flow-note">Loop continues until all approved</div>
+          <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Open items remain →<br>Back to Developer</div>
         </div>
       </div>
     </div>
@@ -497,13 +476,13 @@ screens.howto = function () {
     <table class="perm-table">
       <thead><tr><th>Stage</th><th>Reviewer Can</th><th>Developer Can</th></tr></thead>
       <tbody>
-        <tr><td>Pending Review</td><td>Start Review (acquires lock)</td><td>Add new videos; cannot act on this one yet</td></tr>
-        <tr><td>In Review</td><td>Log/edit/delete comments, auto-scan URLs, submit Review Complete</td><td>View only (locked by Reviewer)</td></tr>
+        <tr><td>Pending Review</td><td>Start Review (acquires lock)</td><td>Add new videos (optional Video URL); rename their own entries</td></tr>
+        <tr><td>In Review</td><td>Log/edit/delete comments, auto-scan URLs, submit Review Complete</td><td>View only</td></tr>
         <tr><td>Reviewed</td><td>Waiting</td><td>Start Fix (acquires lock)</td></tr>
-        <tr><td>In Fix</td><td>View only (locked by Developer)</td><td>Mark comments Addressed/Can't Fix, confirm upload & complete fixes</td></tr>
-        <tr><td>Fixed</td><td>Start Validation (acquires lock, increments round)</td><td>Waiting</td></tr>
-        <tr><td>In Validation</td><td>Approve fixes, add follow-ups, add new comments, submit Review Complete</td><td>View only (locked by Reviewer)</td></tr>
-        <tr><td>Signed Off</td><td>View; Rollback to Fix stage (new round)</td><td>View only</td></tr>
+        <tr><td>In Fix</td><td>View only</td><td>Mark comments, confirm upload & optional video URL, complete fixes</td></tr>
+        <tr><td>Fixed</td><td>Start Validation (increments round)</td><td>Waiting</td></tr>
+        <tr><td>In Validation</td><td>Approve fixes, follow-ups, new comments, Review Complete</td><td>View only</td></tr>
+        <tr><td>Signed Off</td><td>View; Rollback</td><td>View only</td></tr>
       </tbody>
     </table>
   </div>
@@ -523,7 +502,7 @@ screens.auditTrail = function () {
     </tr>`).join('');
   document.getElementById('app').innerHTML = `
   <div class="topbar">
-    <div><b>${v.name}</b> — Audit Trail</div>
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Audit Trail</div>
     <button class="secondary" data-action="backFromAudit">Back</button>
   </div>
   <div style="background:#fff;padding:16px;border-radius:8px">
@@ -559,15 +538,14 @@ function getAction(v) {
 }
 
 /* =========================================================
-   REVIEW SCREEN — static shell + dynamic OPEN panel (right)
-   + dynamic RESOLVED panel (left, under video)
+   REVIEW SCREEN — topbar shows Application Name + Video URL link
    ========================================================= */
 screens.review = function () {
   const v = findVideo(activeVideoId);
   const validation = v.status === 'in_validation';
   document.getElementById('app').innerHTML = `
   <div class="topbar">
-    <div><b>${v.name}</b> — Round ${v.round} ${validation ? '(Validation)' : '(Review)'}</div>
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Round ${v.round} ${validation ? '(Validation)' : '(Review)'}</div>
     <div class="flexgap">
       <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
       <button class="secondary" data-action="backToDashboard">Back to Queue</button>
@@ -582,6 +560,7 @@ screens.review = function () {
         <button class="success" data-action="reviewComplete">Review Complete</button>
       </div>
       <video id="reviewVideo" controls></video>
+      ${v.videoUrl ? `<div class="small" style="margin-top:6px">🔗 <a class="url-link" href="${v.videoUrl}" target="_blank" rel="noopener">Open Video URL in new tab</a></div>` : ''}
       <div id="scanProgress" class="small"></div>
       <div id="obsArea"></div>
       <div class="resolved-section" id="resolvedPanel"></div>
@@ -672,6 +651,8 @@ function attachVideoHandlers() {
     const key = cacheKey(v);
     if (!video.hasAttribute('src') && videoSrcCache[key]) {
       video.src = videoSrcCache[key];
+    } else if (!video.hasAttribute('src') && v.videoUrl) {
+      video.src = v.videoUrl;
     }
     video.addEventListener('loadedmetadata', () => {
       if (!v.durationSec) { v.durationSec = video.duration; saveState(); }
@@ -683,14 +664,13 @@ function attachVideoHandlers() {
 }
 
 /* =========================================================
-   FIX SCREEN — static shell + dynamic OPEN panel (right)
-   + dynamic ADDRESSED panel (left, under video)
+   FIX SCREEN
    ========================================================= */
 screens.fix = function () {
   const v = findVideo(activeVideoId);
   document.getElementById('app').innerHTML = `
   <div class="topbar">
-    <div><b>${v.name}</b> — Round ${v.round} (Fixing)</div>
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Round ${v.round} (Fixing)</div>
     <div class="flexgap">
       <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
       <button class="secondary" data-action="backToDashboard">Back to Queue</button>
@@ -809,6 +789,9 @@ const actions = {
       <input type="text" id="newAppName" placeholder="Application name">
       <label style="margin-top:8px;display:block">Video Name</label>
       <input type="text" id="newVideoName" placeholder="Video name / description">
+      <label style="margin-top:8px;display:block">Video URL (optional)</label>
+      <input type="text" id="newVideoUrl" placeholder="https://.../latest-video.mp4">
+      <p class="small" style="margin-top:4px">If provided, this URL will be shown to the Reviewer in the Video Queue and on the Review screen, and the tool will try to auto-load it. "Browse Video File" always remains available too.</p>
       <div class="flexgap" style="margin-top:12px"><button data-action="saveNewVideo">Save</button><button class="secondary" data-action="closeModal">Cancel</button></div>
     </div></div>`);
   },
@@ -816,15 +799,51 @@ const actions = {
   async saveNewVideo() {
     const appName = document.getElementById('newAppName').value.trim();
     const name = document.getElementById('newVideoName').value.trim();
+    const videoUrl = document.getElementById('newVideoUrl').value.trim();
     if (!name) return;
     await loadState();
-    const newVideo = { id: uid(), appName, name, status:'pending_review', round:1, lock:null, addedBy: currentUser.name, addedAt: nowStr(), comments:[], durationSec:null, auditLog:[] };
-    logAudit(newVideo, 'Video Created', `App: ${appName || 'N/A'}`);
+    const newVideo = { id: uid(), appName, name, status:'pending_review', round:1, lock:null, addedBy: currentUser.name, addedAt: nowStr(), comments:[], durationSec:null, auditLog:[], videoUrl: videoUrl || '' };
+    logAudit(newVideo, 'Video Created', `App: ${appName || 'N/A'}${videoUrl ? ', Video URL provided' : ''}`);
     state.videos.push(newVideo);
     await saveState();
     actions.closeModal();
     render();
   },
+
+  /* ===== NEW: Edit Name (developer who created the entry only) ===== */
+  openEditName(el, id) {
+    const v = findVideo(id);
+    if (!v) return;
+    document.getElementById('app').insertAdjacentHTML('beforeend', `
+    <div class="modal-bg" id="editNameModal"><div class="modal">
+      <h3>Edit Video Name</h3>
+      <label>Video Name</label>
+      <input type="text" id="editVideoNameInput" value="${v.name.replace(/"/g,'&quot;')}">
+      <div class="flexgap" style="margin-top:12px">
+        <button data-action="saveEditedName" data-id="${v.id}">Save</button>
+        <button class="secondary" data-action="closeEditNameModal">Cancel</button>
+      </div>
+    </div></div>`);
+  },
+  closeEditNameModal() { document.getElementById('editNameModal')?.remove(); },
+  async saveEditedName(el, id) {
+    const v = findVideo(id);
+    if (!v) return;
+    const newName = document.getElementById('editVideoNameInput').value.trim();
+    if (!newName) { toast('Name cannot be empty'); return; }
+    if (v.addedBy !== currentUser.name || currentUser.role !== 'developer') {
+      toast('Only the developer who created this entry can rename it');
+      actions.closeEditNameModal();
+      return;
+    }
+    const oldName = v.name;
+    v.name = newName;
+    logAudit(v, 'Video Renamed', `"${oldName}" → "${newName}"`);
+    await saveState();
+    actions.closeEditNameModal();
+    render();
+  },
+
   async startReview(el, id) {
     await loadState();
     const v = findVideo(id);
@@ -1004,6 +1023,11 @@ const actions = {
     if (pending.length) { toast('Please mark all comments before completing.'); return; }
     const confirmUpload = confirm('Confirm: Have you uploaded the latest MP4 file to SharePoint?');
     if (confirmUpload) {
+      const newUrl = prompt('Enter the URL to fetch the latest MP4 (optional — leave blank to keep existing):', v.videoUrl || '');
+      if (newUrl !== null && newUrl.trim() !== '') {
+        v.videoUrl = newUrl.trim();
+        logAudit(v, 'Video URL Updated', `New URL provided for Round ${v.round} fixed video`);
+      }
       v.status = 'fixed'; v.lock = null;
       logAudit(v, 'Lock Released', `Developer completed all fixes for Round ${v.round}`);
       logAudit(v, 'Status Change', 'in_fix → fixed');
@@ -1168,10 +1192,3 @@ render();
 </script>
 </body>
 </html>
-
-							<script>
-                            	
-							</script>
-                        </body>
-                        </html>
-                    
