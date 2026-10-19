@@ -97,6 +97,36 @@ function truncateText(text, maxLen) {
   return safeCut.trim() + '...';
 }
 
+/* =========================================================
+   NEW: WebP support detection with safe JPEG fallback.
+   Some browsers (notably older Safari) silently fall back to
+   PNG when asked for WebP via canvas.toDataURL, which would
+   actually increase file size instead of reducing it. This
+   checks the ACTUAL returned data URL prefix to confirm true
+   WebP support before using it; otherwise JPEG is used exactly
+   as before, at the same quality setting.
+   ========================================================= */
+let webpSupported = null;
+function supportsWebP() {
+  if (webpSupported !== null) return webpSupported;
+  try {
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 1;
+    testCanvas.height = 1;
+    const dataUrl = testCanvas.toDataURL('image/webp', 0.8);
+    webpSupported = dataUrl.indexOf('data:image/webp') === 0;
+  } catch (e) {
+    webpSupported = false;
+  }
+  return webpSupported;
+}
+function captureScreenshot(canvas, quality) {
+  if (supportsWebP()) {
+    return canvas.toDataURL('image/webp', quality);
+  }
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 /* ============== AUDIT TRAIL HELPER ============== */
 function logAudit(v, action, details) {
   if (!v.auditLog) v.auditLog = [];
@@ -927,7 +957,7 @@ const actions = {
     canvas.width = Math.min(video.videoWidth || MAX_W, MAX_W);
     canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    const screenshotDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const screenshotDataUrl = captureScreenshot(canvas, 0.92);
     const commentType = recognition ? 'voice' : 'text';
     v.comments.push({
       id: uid(), time: currentTimeAtSubmit, screenshot: screenshotDataUrl,
@@ -1108,7 +1138,7 @@ const actions = {
           const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
           const urls = extractUrls(text);
           if (urls.length) {
-            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: canvas.toDataURL('image/jpeg', 0.92) });
+            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: captureScreenshot(canvas, 0.92) });
           }
         } catch (e) { /* ignore OCR error for this region */ }
       }
