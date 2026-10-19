@@ -80,4 +80,1105 @@ let recognition = null;
 let activeCommentIndex = 0;
 
 let videoSrcCache = {};
+let videoTimeCache = {};
+function cacheKey(v) { return v.id + '_r' + v.round; }
+
+let statusFilters = { app:'', status:'', videoSearch:'' };
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const nowStr = () => new Date().toLocaleString();
+
+/* ============== TEXT HELPERS (clean look, no truncated words) ============== */
+function truncateText(text, maxLen) {
+  if (!text || text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  const safeCut = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+  return safeCut.trim() + '...';
+}
+
+/* ============== AUDIT TRAIL HELPER ============== */
+function logAudit(v, action, details) {
+  if (!v.auditLog) v.auditLog = [];
+  v.auditLog.push({
+    id: uid(),
+    at: nowStr(),
+    by: currentUser.name || 'unknown',
+    role: currentUser.role || 'unknown',
+    action,
+    details: details || ''
+  });
+}
+
+/* ============== PERSISTENCE ============== */
+async function pickFile(create) {
+  try {
+    if (create) {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'video-review-data.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      state = { videos: [], __lastModified: null };
+      await saveState();
+    } else {
+      [fileHandle] = await window.showOpenFilePicker({
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      await loadState();
+    }
+    toast('Data file connected: ' + fileHandle.name);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      useLocalStorageFallback = true;
+      toast('File System API unavailable — using browser local storage fallback');
+      const saved = localStorage.getItem('vrt_data');
+      state = saved ? JSON.parse(saved) : { videos: [], __lastModified: Date.now() };
+    }
+  }
+}
+
+async function loadState() {
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) {
+      try {
+        state = JSON.parse(saved);
+      } catch (e) {
+        console.error('JSON parse error (localStorage):', e);
+        toast('⚠️ Data appears corrupted — keeping last known good data in memory.');
+      }
+    }
+    return;
+  }
+  if (!fileHandle) return;
+  let file, text;
+  try {
+    file = await fileHandle.getFile();
+    text = await file.text();
+  } catch (e) {
+    console.error('Error reading file:', e);
+    toast('⚠️ Could not read the data file. Please check it is still accessible.');
+    return;
+  }
+  try {
+    const parsed = text ? JSON.parse(text) : { videos: [], __lastModified: null };
+    state = parsed;
+    state.__lastModified = file.lastModified;
+  } catch (e) {
+    console.error('JSON parse error (file):', e);
+    toast('⚠️ Data file appears corrupted or incomplete — changes were not loaded. Please check the file.');
+  }
+}
+
+async function saveState() {
+  if (useLocalStorageFallback) {
+    state.__lastModified = Date.now();
+    localStorage.setItem('vrt_data', JSON.stringify(state));
+    return;
+  }
+  if (!fileHandle) return;
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(state, null, 2));
+  await writable.close();
+  const file = await fileHandle.getFile();
+  state.__lastModified = file.lastModified;
+}
+
+async function heartbeat() {
+  let changed = false;
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.__lastModified !== state.__lastModified) { state = parsed; changed = true; }
+      } catch (e) {
+        console.error('JSON parse error (heartbeat, localStorage):', e);
+      }
+    }
+  } else if (fileHandle) {
+    try {
+      const file = await fileHandle.getFile();
+      if (file.lastModified !== state.__lastModified) {
+        const before = state.__lastModified;
+        await loadState();
+        if (state.__lastModified !== before) changed = true;
+      }
+    } catch (e) { /* ignore transient read errors */ }
+  }
+  if (!changed) return;
+  toast('Synced latest changes from file');
+  if (screen === 'review') { renderCommentsPanel(); renderResolvedPanel(); }
+  else if (screen === 'fix') { renderFixPanel(); renderFixResolvedPanel(); }
+  else render();
+}
+setInterval(heartbeat, 4000);
+
+/* ============== UTIL ============== */
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function findVideo(id) { return state.videos.find(v => v.id === id); }
+function render() { screens[screen](); }
+function fmtTime(t) {
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+function openLightbox(src) {
+  const bg = document.createElement('div');
+  bg.className = 'lightbox-bg';
+  bg.innerHTML = `<img src="${src}">`;
+  bg.addEventListener('click', () => bg.remove());
+  document.body.appendChild(bg);
+}
+
+/* ============== SCREENS ============== */
+const screens = {};
+
+screens.init = function () {
+  document.getElementById('app').innerHTML = `
+  <div class="center-card">
+    <h2>Video Review Tool</h2>
+    <p class="small">Select your role, enter your name, and open your shared data file.</p>
+    <div class="flexgap" style="margin-bottom:16px">
+      <div class="role-btn ${currentUser.role==='reviewer'?'active':''}" data-action="pickRole" data-id="reviewer">Reviewer</div>
+      <div class="role-btn ${currentUser.role==='developer'?'active':''}" data-action="pickRole" data-id="developer">Developer</div>
+    </div>
+    <label>Your Name <span style="color:#dc2626">*</span></label>
+    <input type="text" id="userName" value="${currentUser.name}" placeholder="e.g. Priya" required>
+    <div style="margin:16px 0">
+      <button class="secondary" style="width:100%" data-action="openDataFile">Open Existing Data File</button>
+      <p class="small" style="margin-top:6px">First time setup? <a href="#" data-action="createDataFile">Create a new data file</a> instead.</p>
+    </div>
+    <p class="small">${fileHandle ? 'Connected: ' + fileHandle.name : (useLocalStorageFallback ? 'Using local-storage fallback' : 'No file connected yet')}</p>
+    <button class="success" style="width:100%" data-action="enterApp" ${(!currentUser.role || !currentUser.name.trim() || (!fileHandle && !useLocalStorageFallback)) ? 'disabled' : ''}>Continue</button>
+    <p class="small" style="text-align:center;margin-top:10px"><a href="#" data-action="openHowTo">How to use this tool</a></p>
+  </div>`;
+  document.getElementById('userName').addEventListener('input', (e) => {
+    currentUser.name = e.target.value;
+    const btn = document.querySelector('[data-action="enterApp"]');
+    if (btn) btn.disabled = !currentUser.role || !e.target.value.trim() || (!fileHandle && !useLocalStorageFallback);
+  });
+};
+
+screens.dashboard = function () {
+  const rows = state.videos.map(v => {
+    const act = getAction(v);
+    const canEditName = currentUser.role === 'developer' && v.addedBy === currentUser.name;
+    return `<tr>
+      <td>${v.appName || 'NA'}</td>
+      <td>${v.name}</td>
+      <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span></td>
+      <td>${v.round}</td>
+      <td>${v.lock && v.lock.role ? `<span class="lockmsg">🔒 ${v.lock.role} (${v.lock.by})</span>` : '—'}</td>
+      <td>${v.comments.length}</td>
+      <td>${v.addedBy} / ${v.addedAt}</td>
+      <td class="flexgap">
+        ${act.disabled ? `<button disabled>${act.label}</button>` : `<button data-action="${act.action}" data-id="${v.id}">${act.label}</button>`}
+        <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
+        ${canEditName ? `<button class="secondary" data-action="openEditName" data-id="${v.id}">Edit Name</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${currentUser.name}</b> — <span class="badge" style="background:#111">${currentUser.role}</span></div>
+    <div class="flexgap">
+      <button class="secondary" data-action="openHowTo">How to Use</button>
+      <button class="secondary" data-action="openStatusDashboard">Status Overview</button>
+      <button class="secondary" data-action="exportCsv">Export CSV</button>
+      <button class="secondary" data-action="refreshNow">Refresh</button>
+      <button class="danger" data-action="logout">Switch User/Role</button>
+    </div>
+  </div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <div class="flexgap" style="justify-content:space-between;margin-bottom:12px">
+      <h2>Video Queue</h2>
+      ${currentUser.role === 'developer' ? `<button data-action="openAddVideo">+ Add New Video</button>` : ''}
+    </div>
+    <table>
+      <thead><tr>
+        <th>Application</th><th>Name</th><th>Status</th><th>Round</th><th>Lock</th><th>#Comments</th><th>Added By</th>
+        <th>Action</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan=8>No videos yet.</td></tr>`}</tbody>
+    </table>
+  </div>`;
+};
+
+/* ===== Status Overview with Filters ===== */
+screens.statusDashboard = function () {
+  const apps = [...new Set(state.videos.map(v => v.appName).filter(Boolean))];
+  const statuses = [...new Set(state.videos.map(v => v.status))];
+
+  let list = state.videos.slice();
+  if (statusFilters.app) list = list.filter(v => v.appName === statusFilters.app);
+  if (statusFilters.status) list = list.filter(v => v.status === statusFilters.status);
+  if (statusFilters.videoSearch) list = list.filter(v => v.name.toLowerCase().includes(statusFilters.videoSearch.toLowerCase()));
+
+  const rows = list.map(v => {
+    const rounds = {};
+    v.comments.forEach(c => {
+      if (!rounds[c.round]) rounds[c.round] = { logged: 0, fixed: 0 };
+      rounds[c.round].logged++;
+      if (c.fixStatus === 'approved') rounds[c.round].fixed++;
+    });
+    const roundSummary = Object.keys(rounds).sort((a,b)=>a-b)
+      .map(r => `R${r}: ${rounds[r].fixed}/${rounds[r].logged} fixed`).join('<br>') || 'No comments yet';
+    const duration = v.durationSec ? fmtTime(v.durationSec) : '—';
+    let withWhom;
+    if (v.status === 'signed_off') withWhom = 'Signed Off ✅';
+    else if (v.lock && v.lock.role) withWhom = `With ${v.lock.role} (${v.lock.by})`;
+    else if (v.status === 'pending_review') withWhom = 'With Reviewer (not started)';
+    else if (v.status === 'reviewed') withWhom = 'With Developer (not started)';
+    else if (v.status === 'fixed') withWhom = 'With Reviewer (not started)';
+    else withWhom = '—';
+    return `<tr>
+      <td>${v.appName || '—'}</td>
+      <td>${v.name}</td>
+      <td>${duration}</td>
+      <td>${roundSummary}</td>
+      <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span><br><span class="small">${withWhom}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>Status Overview</b> — ${currentUser.name} (${currentUser.role})</div>
+    <div class="flexgap">
+      <button class="secondary" data-action="openHowTo">How to Use</button>
+      <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+    </div>
+  </div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <div class="filter-row">
+      <div>
+        <label class="small">Application</label>
+        <select id="filterApp">
+          <option value="">All</option>
+          ${apps.map(a => `<option value="${a}" ${statusFilters.app===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="small">Status</label>
+        <select id="filterStatus">
+          <option value="">All</option>
+          ${statuses.map(s => `<option value="${s}" ${statusFilters.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="small">Video Name Search</label>
+        <input type="text" id="filterVideo" value="${statusFilters.videoSearch}" placeholder="Search video name...">
+      </div>
+      <div style="flex:0 0 auto;align-self:flex-end">
+        <button class="secondary" data-action="clearStatusFilters">Clear Filters</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Application</th><th>Video</th><th>Duration</th><th>Issues Logged vs Fixed (by round)</th><th>Current Status</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan=5>No matching videos.</td></tr>'}</tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('filterApp').addEventListener('change', (e) => { statusFilters.app = e.target.value; screens.statusDashboard(); });
+  document.getElementById('filterStatus').addEventListener('change', (e) => { statusFilters.status = e.target.value; screens.statusDashboard(); });
+  document.getElementById('filterVideo').addEventListener('input', (e) => { statusFilters.videoSearch = e.target.value; screens.statusDashboard(); });
+};
+
+/* ===== How To Use Page ===== */
+screens.howto = function () {
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>How to Use This Tool</b></div>
+    <button class="secondary" data-action="backFromHowTo">Back</button>
+  </div>
+
+  <div style="background:#fff;padding:20px;border-radius:8px;margin-bottom:16px">
+    <h2>Overview</h2>
+    <p>This tool helps Reviewers and Developers collaborate on fixing issues found in review videos, entirely from your browser — no server required. All data (comments, statuses, locks, audit history) is stored in a shared JSON data file that both roles open, and the tool auto-syncs changes using a heartbeat check every few seconds.</p>
+
+    <h3>Getting Started</h3>
+    <ol>
+      <li>On the launch screen, choose your role: <b>Reviewer</b> or <b>Developer</b>.</li>
+      <li>Enter your name (required).</li>
+      <li>Open the shared data file (JSON), or create a new one on first-time setup.</li>
+      <li>Click Continue to reach your Dashboard / Video Queue.</li>
+    </ol>
+
+    <h3>Developer: Adding a Video</h3>
+    <p>Developers add a new video entry (Application Name + Video Name) to the queue once it's ready for review. The developer who created an entry can later rename it using the "Edit Name" button in the Video Queue.</p>
+
+    <h3>Reviewer: Logging Issues (Round 1)</h3>
+    <ol>
+      <li>Click "Start Review" — locks the entry for you exclusively.</li>
+      <li>Browse and select the local MP4 file.</li>
+      <li>Optionally click "Auto Review for URLs" to scan for on-screen URLs. Accept or reject each one.</li>
+      <li>Add comments by typing or using the 🎤 mic button. Clicking into the comment box auto-pauses the video. The field clears automatically after adding.</li>
+      <li>Click "Review Complete" when done.</li>
+    </ol>
+
+    <h3>Developer: Fixing Issues</h3>
+    <ol>
+      <li>Click "Start Fix" — locks the entry for you.</li>
+      <li>Mark each comment "Addressed" or "Can't Fix".</li>
+      <li>Once all comments are marked, click "All Fixes Completed" — confirm the SharePoint upload. This releases the lock and sends it back to the Reviewer.</li>
+    </ol>
+
+    <h3>Reviewer: Validation Rounds</h3>
+    <ol>
+      <li>Click "Start Validation Rx" — increments the round and locks the video for you.</li>
+      <li>Browse the updated video file.</li>
+      <li>Approve fixes or add follow-ups. Add new comments if needed.</li>
+      <li>Click "Review Complete" — if everything is approved, the video is Signed Off; otherwise it returns to the Developer.</li>
+    </ol>
+
+    <h3>Rollback</h3>
+    <p>Only the Reviewer can roll back a Signed Off video to the Fix stage. This starts a new round automatically.</p>
+
+    <h3>Deleting Comments</h3>
+    <p>Deleting a comment now asks for confirmation first, since this action cannot be undone.</p>
+  </div>
+
+  <div class="flow-wrap">
+    <h3>Review Lifecycle Flowchart</h3>
+    <div class="flow-col">
+      <div class="flow-box">Developer adds Video<br><span class="small">(Pending Review)</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Review<br><span class="small">🔒 Locked for Reviewer</span></div>
+      <div class="flow-note">Browse video, auto-scan URLs, log comments</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">Reviewer: Review Complete</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Developer: Start Fix<br><span class="small">🔒 Locked for Developer</span></div>
+      <div class="flow-note">Mark each comment Addressed / Can't Fix</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">Developer: All Fixes Completed<br><span class="small">(Confirm upload)</span></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Validation (Round+1)</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">Reviewer: Review Complete</div>
+      <div class="flow-arrow">↓</div>
+      <div style="display:flex;gap:40px;align-items:flex-start">
+        <div class="flow-col">
+          <div class="flow-box" style="border-color:#16a34a;background:#dcfce7">All approved →<br>SIGNED OFF ✅</div>
+        </div>
+        <div class="flow-col">
+          <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Open items remain →<br>Back to Developer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fff;padding:20px;border-radius:8px;margin-top:16px">
+    <h3>Role Permissions Matrix</h3>
+    <table class="perm-table">
+      <thead><tr><th>Stage</th><th>Reviewer Can</th><th>Developer Can</th></tr></thead>
+      <tbody>
+        <tr><td>Pending Review</td><td>Start Review (acquires lock)</td><td>Add new videos; rename their own entries</td></tr>
+        <tr><td>In Review</td><td>Log/edit/delete comments, auto-scan URLs, submit Review Complete</td><td>View only</td></tr>
+        <tr><td>Reviewed</td><td>Waiting</td><td>Start Fix (acquires lock)</td></tr>
+        <tr><td>In Fix</td><td>View only</td><td>Mark comments, confirm upload, complete fixes</td></tr>
+        <tr><td>Fixed</td><td>Start Validation (increments round)</td><td>Waiting</td></tr>
+        <tr><td>In Validation</td><td>Approve fixes, follow-ups, new comments, Review Complete</td><td>View only</td></tr>
+        <tr><td>Signed Off</td><td>View; Rollback</td><td>View only</td></tr>
+      </tbody>
+    </table>
+  </div>
+  `;
+};
+
+/* ===== Audit Trail Screen ===== */
+screens.auditTrail = function () {
+  const v = findVideo(activeVideoId);
+  const log = (v.auditLog || []).slice().reverse();
+  const rows = log.map(e => `
+    <tr class="audit-row">
+      <td>${e.at}</td>
+      <td>${e.by} (${e.role})</td>
+      <td class="audit-action">${e.action}</td>
+      <td>${e.details || ''}</td>
+    </tr>`).join('');
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Audit Trail</div>
+    <button class="secondary" data-action="backFromAudit">Back</button>
+  </div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <table>
+      <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan=4>No audit history yet.</td></tr>'}</tbody>
+    </table>
+  </div>`;
+};
+
+function getAction(v) {
+  const role = currentUser.role;
+  const mine = v.lock && v.lock.by === currentUser.name && v.lock.role === role;
+  switch (v.status) {
+    case 'pending_review':
+      return role === 'reviewer' ? { label: 'Start Review', action: 'startReview' } : { label: 'Waiting for Reviewer', disabled: true };
+    case 'in_review':
+      if (role === 'reviewer' && mine) return { label: 'Continue Review', action: 'openReview' };
+      return { label: 'Locked by Reviewer', disabled: true };
+    case 'reviewed':
+      return role === 'developer' ? { label: 'Start Fix', action: 'startFix' } : { label: 'Waiting for Developer', disabled: true };
+    case 'in_fix':
+      if (role === 'developer' && mine) return { label: 'Continue Fix', action: 'openFix' };
+      return { label: 'Locked by Developer', disabled: true };
+    case 'fixed':
+      return role === 'reviewer' ? { label: `Start Validation R${v.round + 1}`, action: 'startValidation' } : { label: 'Waiting for Reviewer', disabled: true };
+    case 'in_validation':
+      if (role === 'reviewer' && mine) return { label: 'Continue Validation', action: 'openReview' };
+      return { label: 'Locked by Reviewer (validating)', disabled: true };
+    case 'signed_off':
+      return { label: role === 'reviewer' ? 'View / Rollback' : 'Signed Off (view only)', action: 'openSignedOff' };
+  }
+}
+
+/* =========================================================
+   REVIEW SCREEN
+   ========================================================= */
+screens.review = function () {
+  const v = findVideo(activeVideoId);
+  const validation = v.status === 'in_validation';
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Round ${v.round} ${validation ? '(Validation)' : '(Review)'}</div>
+    <div class="flexgap">
+      <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
+      <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="video-col">
+      <div class="flexgap" style="margin-bottom:8px">
+        <button data-action="browseVideo">Browse Video File</button>
+        <button class="warn" data-action="autoScanUrls">Auto Review for URLs</button>
+        ${validation ? `<button class="success" data-action="markAllFixed">Mark All as Fixed/Approved</button>` : ''}
+        <button class="success" data-action="reviewComplete">Review Complete</button>
+      </div>
+      <video id="reviewVideo" controls></video>
+      <div id="scanProgress" class="small"></div>
+      <div id="obsArea"></div>
+      <div class="resolved-section" id="resolvedPanel"></div>
+    </div>
+    <div class="comments-col" id="commentsPanel"></div>
+  </div>`;
+  attachVideoHandlers();
+  renderCommentsPanel();
+  renderResolvedPanel();
+};
+
+function renderCommentsPanel() {
+  const panel = document.getElementById('commentsPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  const validation = v.status === 'in_validation';
+  const openComments = v.comments.filter(c => c.fixStatus !== 'approved');
+
+  const existingTa = document.getElementById('commentText');
+  const preservedText = existingTa ? existingTa.value : '';
+  const micOn = !!recognition;
+
+  panel.innerHTML = `
+    <div class="entry-box">
+      <textarea id="commentText" rows="2" placeholder="Type a comment..." data-action-focus="pause">${preservedText}</textarea>
+      <button id="micBtn" data-action="toggleMic">${micOn ? '⏹' : '🎤'}</button>
+      <button class="success" data-action="submitComment">Add</button>
+    </div>
+    <h3>Open Comments (${openComments.length}) ${validation ? `<button class="secondary" data-action="prevComment">◀ Prev</button><button class="secondary" data-action="nextComment">Next ▶</button>` : ''}</h3>
+    ${openComments.map((c) => renderCommentCard(c, validation)).join('') || '<p class="small">No open comments. 🎉</p>'}
+  `;
+
+  const ta = document.getElementById('commentText');
+  const video = document.getElementById('reviewVideo');
+  ta.addEventListener('focus', () => { if (video && !video.paused) video.pause(); });
+}
+
+function renderResolvedPanel() {
+  const panel = document.getElementById('resolvedPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  const resolved = v.comments.filter(c => c.fixStatus === 'approved');
+  panel.innerHTML = `
+    <h3>✅ Approved / Resolved Issues (${resolved.length})</h3>
+    ${resolved.map(c => `
+      <div class="comment-card resolved">
+        <div class="comment-text">${c.text}</div>
+        <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round}</div>
+        <div class="comment-thumb-wrap">
+          <div class="comment-thumb-label">Screenshot ⤵ (click to enlarge)</div>
+          <img class="comment-thumb" src="${c.screenshot}" data-action="viewScreenshot" data-src="${c.screenshot}">
+        </div>
+        <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+        <div class="small">Status: <b>Approved</b></div>
+      </div>`).join('') || '<p class="small">Nothing approved yet.</p>'}
+  `;
+}
+
+function renderCommentCard(c, validation) {
+  return `<div class="comment-card" id="cmt_${c.id}">
+    <div class="comment-text">${c.text}</div>
+    <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round} | ${c.source} | ${c.type}</div>
+    <div class="comment-thumb-wrap">
+      <div class="comment-thumb-label">Screenshot ⤵ (click to enlarge)</div>
+      <img class="comment-thumb" src="${c.screenshot}" data-action="viewScreenshot" data-src="${c.screenshot}">
+    </div>
+    <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+    ${c.devStatus ? `<div class="small">Dev marked: <b>${c.devStatus}</b> ${c.devNote ? '- ' + c.devNote : ''}</div>` : ''}
+    ${validation ? `
+      <div class="flexgap" style="margin-top:6px">
+        <button class="success" data-action="approveFix" data-id="${c.id}" ${c.fixStatus==='approved'?'disabled':''}>Approve Fix</button>
+        <button class="warn" data-action="followup" data-id="${c.id}">Add Follow-up</button>
+      </div>
+      ${c.fixStatus ? `<div class="small">Fix Status: <b>${c.fixStatus}</b> ${c.followupText ? '- ' + c.followupText : ''}</div>` : ''}
+    ` : `
+      <div class="flexgap" style="margin-top:6px">
+        <button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>
+      </div>
+    `}
+  </div>`;
+}
+
+function attachVideoHandlers() {
+  const video = document.getElementById('reviewVideo');
+  if (!video) return;
+  const v = findVideo(activeVideoId);
+  if (v) {
+    const key = cacheKey(v);
+    if (!video.hasAttribute('src') && videoSrcCache[key]) {
+      video.src = videoSrcCache[key];
+    }
+    video.addEventListener('loadedmetadata', () => {
+      if (!v.durationSec) { v.durationSec = video.duration; saveState(); }
+      const t = videoTimeCache[key];
+      if (t) video.currentTime = t;
+    });
+    video.addEventListener('timeupdate', () => { videoTimeCache[key] = video.currentTime; });
+  }
+}
+
+/* =========================================================
+   FIX SCREEN
+   ========================================================= */
+screens.fix = function () {
+  const v = findVideo(activeVideoId);
+  document.getElementById('app').innerHTML = `
+  <div class="topbar">
+    <div><b>${v.appName ? v.appName + ' – ' : ''}${v.name}</b> — Round ${v.round} (Fixing)</div>
+    <div class="flexgap">
+      <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
+      <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="video-col">
+      <div class="flexgap" style="margin-bottom:8px"><button data-action="browseVideo">Browse Video File</button></div>
+      <video id="reviewVideo" controls></video>
+      <div class="resolved-section" id="fixResolvedPanel"></div>
+    </div>
+    <div class="comments-col" id="fixPanel"></div>
+  </div>`;
+  attachVideoHandlers();
+  renderFixPanel();
+  renderFixResolvedPanel();
+};
+
+function renderFixPanel() {
+  const panel = document.getElementById('fixPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  const openComments = v.comments.filter(c => c.devStatus !== 'addressed');
+  panel.innerHTML = `
+    <h3>Open Comments to Address (${openComments.length})</h3>
+    ${openComments.map(c => `
+      <div class="comment-card">
+        <div class="comment-text">${c.text}</div>
+        <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round}</div>
+        <div class="comment-thumb-wrap">
+          <div class="comment-thumb-label">Screenshot ⤵ (click to enlarge)</div>
+          <img class="comment-thumb" src="${c.screenshot}" data-action="viewScreenshot" data-src="${c.screenshot}">
+        </div>
+        <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+        ${c.fixStatus === 'followup' ? `<div class="small" style="color:#b45309">Follow-up: ${c.followupText}</div>` : ''}
+        <div class="flexgap" style="margin-top:6px">
+          <button class="success" data-action="markAddressed" data-id="${c.id}" ${c.devStatus==='addressed'?'disabled':''}>Mark Addressed</button>
+          <button class="danger" data-action="markNotAddressed" data-id="${c.id}" ${c.devStatus==='not-addressed'?'disabled':''}>Can't Fix</button>
+        </div>
+        ${c.devStatus ? `<div class="small">Status: <b>${c.devStatus}</b></div>` : ''}
+      </div>`).join('') || '<p class="small">No open comments. 🎉</p>'}
+    <button class="success" style="width:100%;margin-top:10px" data-action="allFixesComplete">All Fixes Completed</button>
+  `;
+}
+
+function renderFixResolvedPanel() {
+  const panel = document.getElementById('fixResolvedPanel');
+  if (!panel) return;
+  const v = findVideo(activeVideoId);
+  const addressed = v.comments.filter(c => c.devStatus === 'addressed');
+  panel.innerHTML = `
+    <h3>✅ Addressed Issues (${addressed.length})</h3>
+    ${addressed.map(c => `
+      <div class="comment-card resolved">
+        <div class="comment-text">${c.text}</div>
+        <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round}</div>
+        <div class="comment-thumb-wrap">
+          <div class="comment-thumb-label">Screenshot ⤵ (click to enlarge)</div>
+          <img class="comment-thumb" src="${c.screenshot}" data-action="viewScreenshot" data-src="${c.screenshot}">
+        </div>
+        <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
+        <div class="small">Status: <b>Addressed</b></div>
+      </div>`).join('') || '<p class="small">Nothing addressed yet.</p>'}
+  `;
+}
+
+screens.signedoff = function () {
+  const v = findVideo(activeVideoId);
+  document.getElementById('app').innerHTML = `
+  <div class="topbar"><div><b>${v.name}</b> — Signed Off</div>
+  <div class="flexgap">
+    <button class="secondary" data-action="openAuditTrail" data-id="${v.id}">Audit Trail</button>
+    <button class="secondary" data-action="backToDashboard">Back to Queue</button>
+  </div></div>
+  <div style="background:#fff;padding:16px;border-radius:8px">
+    <h3>All comments resolved and approved. Video is signed off.</h3>
+    ${v.comments.map(c => `<div class="comment-card"><div class="comment-text">${c.text}</div><div class="small">${fmtTime(c.time)} — Fix: ${c.fixStatus}</div></div>`).join('')}
+    ${currentUser.role === 'reviewer' ? `<button class="danger" data-action="rollback">Rollback to Fix Stage</button>` : ''}
+  </div>`;
+};
+
+/* ============== ACTIONS ============== */
+const actions = {
+  pickRole(el, id) { currentUser.role = id; screens.init(); },
+  async createDataFile() { await pickFile(true); screens.init(); },
+  async openDataFile() { await pickFile(false); screens.init(); },
+  enterApp() {
+    const name = currentUser.name.trim();
+    if (!name) { alert('Name is required'); return; }
+    currentUser.name = name;
+    screen = 'dashboard';
+    render();
+  },
+  logout() { currentUser = { name:'', role:'' }; screen = 'init'; render(); },
+  refreshNow: async () => { await loadState(); render(); },
+  openStatusDashboard() { prevScreen = 'dashboard'; screen = 'statusDashboard'; render(); },
+  openHowTo() { prevScreen = screen; screen = 'howto'; render(); },
+  backFromHowTo() { screen = prevScreen || 'dashboard'; render(); },
+  openAuditTrail(el, id) { activeVideoId = id; prevScreen = screen; screen = 'auditTrail'; render(); },
+  backFromAudit() { screen = prevScreen || 'dashboard'; render(); },
+  clearStatusFilters() { statusFilters = { app:'', status:'', videoSearch:'' }; render(); },
+  exportCsv() {
+    let rows = [['Video','Round','Timestamp','Comment','Source','LoggedBy','LoggedAt','DevStatus','FixStatus']];
+    state.videos.forEach(v => v.comments.forEach(c => {
+      rows.push([v.name, c.round, fmtTime(c.time), c.text.replace(/\n/g,' '), c.source, c.loggedBy, c.loggedAt, c.devStatus||'', c.fixStatus||'']);
+    }));
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'review-log.csv'; a.click();
+  },
+  openAddVideo() {
+    document.getElementById('app').insertAdjacentHTML('beforeend', `
+    <div class="modal-bg" id="modal"><div class="modal">
+      <h3>Add New Video Entry</h3>
+      <label>Application Name</label>
+      <input type="text" id="newAppName" placeholder="Application name">
+      <label style="margin-top:8px;display:block">Video Name</label>
+      <input type="text" id="newVideoName" placeholder="Video name / description">
+      <div class="flexgap" style="margin-top:12px"><button data-action="saveNewVideo">Save</button><button class="secondary" data-action="closeModal">Cancel</button></div>
+    </div></div>`);
+  },
+  closeModal() { document.getElementById('modal')?.remove(); },
+  async saveNewVideo() {
+    const appName = document.getElementById('newAppName').value.trim();
+    const name = document.getElementById('newVideoName').value.trim();
+    if (!name) return;
+    await loadState();
+    const newVideo = { id: uid(), appName, name, status:'pending_review', round:1, lock:null, addedBy: currentUser.name, addedAt: nowStr(), comments:[], durationSec:null, auditLog:[] };
+    logAudit(newVideo, 'Video Created', `App: ${appName || 'N/A'}`);
+    state.videos.push(newVideo);
+    await saveState();
+    actions.closeModal();
+    render();
+  },
+
+  /* ===== Edit Name (developer who created the entry only) ===== */
+  openEditName(el, id) {
+    const v = findVideo(id);
+    if (!v) return;
+    document.getElementById('app').insertAdjacentHTML('beforeend', `
+    <div class="modal-bg" id="editNameModal"><div class="modal">
+      <h3>Edit Video Name</h3>
+      <label>Video Name</label>
+      <input type="text" id="editVideoNameInput" value="${v.name.replace(/"/g,'&quot;')}">
+      <div class="flexgap" style="margin-top:12px">
+        <button data-action="saveEditedName" data-id="${v.id}">Save</button>
+        <button class="secondary" data-action="closeEditNameModal">Cancel</button>
+      </div>
+    </div></div>`);
+  },
+  closeEditNameModal() { document.getElementById('editNameModal')?.remove(); },
+  async saveEditedName(el, id) {
+    const v = findVideo(id);
+    if (!v) return;
+    const newName = document.getElementById('editVideoNameInput').value.trim();
+    if (!newName) { toast('Name cannot be empty'); return; }
+    if (v.addedBy !== currentUser.name || currentUser.role !== 'developer') {
+      toast('Only the developer who created this entry can rename it');
+      actions.closeEditNameModal();
+      return;
+    }
+    const oldName = v.name;
+    v.name = newName;
+    logAudit(v, 'Video Renamed', `"${oldName}" → "${newName}"`);
+    await saveState();
+    actions.closeEditNameModal();
+    render();
+  },
+
+  async startReview(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
+    v.status = 'in_review';
+    v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
+    logAudit(v, 'Lock Acquired', `Reviewer started Round ${v.round} review`);
+    logAudit(v, 'Status Change', `pending_review → in_review`);
+    await saveState();
+    activeVideoId = id; screen = 'review'; render();
+  },
+  openReview(el, id) { activeVideoId = id; screen = 'review'; render(); },
+  async startFix(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'developer')) { toast('Locked by someone else'); render(); return; }
+    v.status = 'in_fix';
+    v.lock = { role:'developer', by: currentUser.name, at: nowStr() };
+    logAudit(v, 'Lock Acquired', `Developer started fixing Round ${v.round}`);
+    logAudit(v, 'Status Change', `reviewed → in_fix`);
+    await saveState();
+    activeVideoId = id; screen = 'fix'; render();
+  },
+  openFix(el, id) { activeVideoId = id; screen = 'fix'; render(); },
+  async startValidation(el, id) {
+    await loadState();
+    const v = findVideo(id);
+    if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
+    const prevRound = v.round;
+    v.status = 'in_validation';
+    v.round += 1;
+    v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
+    logAudit(v, 'Lock Acquired', `Reviewer started validation`);
+    logAudit(v, 'Round Incremented', `R${prevRound} → R${v.round}`);
+    logAudit(v, 'Status Change', `fixed → in_validation`);
+    await saveState();
+    activeVideoId = id; screen = 'review'; render();
+  },
+  openSignedOff(el, id) { activeVideoId = id; screen = 'signedoff'; render(); },
+  backToDashboard() { screen = 'dashboard'; render(); },
+
+  browseVideo() {
+    const input = document.getElementById('videoFileInput');
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      const video = document.getElementById('reviewVideo');
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      const v = findVideo(activeVideoId);
+      if (v) videoSrcCache[cacheKey(v)] = url;
+    };
+    input.click();
+  },
+
+  toggleMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('Speech recognition not supported in this browser'); return; }
+    const btn = document.getElementById('micBtn');
+    if (recognition) { recognition.stop(); recognition = null; btn.textContent = '🎤'; return; }
+    const video = document.getElementById('reviewVideo');
+    if (video && !video.paused) video.pause();
+    recognition = new SR();
+    recognition.continuous = true; recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      let text = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript + ' ';
+      const ta = document.getElementById('commentText');
+      if (ta) ta.value += text;
+    };
+    recognition.onend = () => { const b = document.getElementById('micBtn'); if (b) b.textContent = '🎤'; recognition = null; };
+    recognition.start();
+    btn.textContent = '⏹';
+  },
+
+  async submitComment() {
+    const video = document.getElementById('reviewVideo');
+    const textEl = document.getElementById('commentText');
+    const text = textEl.value.trim();
+    if (!text) { toast('Enter a comment'); return; }
+    if (!video.src) { toast('Browse a video first'); return; }
+    const v = findVideo(activeVideoId);
+    const currentTimeAtSubmit = video.currentTime;
+    const canvas = document.createElement('canvas');
+    const MAX_W = 1280;
+    canvas.width = Math.min(video.videoWidth || MAX_W, MAX_W);
+    canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const screenshotDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const commentType = recognition ? 'voice' : 'text';
+    v.comments.push({
+      id: uid(), time: currentTimeAtSubmit, screenshot: screenshotDataUrl,
+      text, type: commentType, source:'manual',
+      loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
+      devStatus: null, devNote:'', fixStatus: null, followupText:''
+    });
+    logAudit(v, 'Comment Added', `[${commentType}] at ${fmtTime(currentTimeAtSubmit)}: "${truncateText(text, 80)}"`);
+    textEl.value = '';
+    await saveState();
+    renderCommentsPanel();
+    renderResolvedPanel();
+  },
+
+  seekTo(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    const video = document.getElementById('reviewVideo');
+    if (video && c) video.currentTime = c.time;
+  },
+
+  viewScreenshot(el) {
+    openLightbox(el.dataset.src);
+  },
+
+  async deleteComment(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    if (!c) return;
+    const preview = truncateText(c.text, 100);
+    const confirmDelete = confirm(`Are you sure you want to delete this comment?\n\n"${preview}"\n\nThis action cannot be undone.`);
+    if (!confirmDelete) return;
+    logAudit(v, 'Comment Deleted', `at ${fmtTime(c.time)}: "${preview}"`);
+    v.comments = v.comments.filter(c => c.id !== id);
+    await saveState();
+    renderCommentsPanel();
+    renderResolvedPanel();
+  },
+
+  async reviewComplete() {
+    const v = findVideo(activeVideoId);
+    if (v.status === 'in_review') {
+      v.status = 'reviewed'; v.lock = null;
+      logAudit(v, 'Lock Released', 'Reviewer submitted Round 1 review');
+      logAudit(v, 'Status Change', 'in_review → reviewed');
+      await saveState();
+      toast('Review submitted. Locked released for developer.');
+    } else if (v.status === 'in_validation') {
+      const open = v.comments.filter(c => c.fixStatus !== 'approved');
+      if (open.length === 0) {
+        v.status = 'signed_off'; v.lock = { role:'locked', by:'system', at: nowStr() };
+        logAudit(v, 'Status Change', 'in_validation → signed_off');
+        logAudit(v, 'Video Signed Off', `All comments approved in Round ${v.round}`);
+        toast('All fixes approved — Video Signed Off!');
+      } else {
+        v.status = 'reviewed'; v.lock = null;
+        logAudit(v, 'Lock Released', `Reviewer submitted validation Round ${v.round}, ${open.length} item(s) still open`);
+        logAudit(v, 'Status Change', 'in_validation → reviewed');
+        toast('Some items still open — sent back to developer.');
+      }
+      await saveState();
+    }
+    screen = 'dashboard'; render();
+  },
+
+  async markAddressed(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.devStatus = 'addressed';
+    logAudit(v, 'Comment Addressed', `at ${fmtTime(c.time)}: "${truncateText(c.text, 80)}"`);
+    await saveState();
+    renderFixPanel();
+    renderFixResolvedPanel();
+  },
+  async markNotAddressed(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.devStatus = 'not-addressed';
+    c.devNote = prompt('Reason / note:', c.devNote || '') || '';
+    logAudit(v, "Comment Marked Can't Fix", `at ${fmtTime(c.time)} — Note: "${c.devNote}"`);
+    await saveState();
+    renderFixPanel();
+    renderFixResolvedPanel();
+  },
+  async allFixesComplete() {
+    const v = findVideo(activeVideoId);
+    const pending = v.comments.filter(c => !c.devStatus);
+    if (pending.length) { toast('Please mark all comments before completing.'); return; }
+    const confirmUpload = confirm('Confirm: Have you uploaded the latest MP4 file to SharePoint?');
+    if (confirmUpload) {
+      v.status = 'fixed'; v.lock = null;
+      logAudit(v, 'Lock Released', `Developer completed all fixes for Round ${v.round}`);
+      logAudit(v, 'Status Change', 'in_fix → fixed');
+      logAudit(v, 'SharePoint Upload Confirmed', '');
+      await saveState();
+      toast('Marked fixed and uploaded. Sent to reviewer.');
+      screen = 'dashboard'; render();
+    }
+  },
+
+  async approveFix(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    c.fixStatus = 'approved';
+    logAudit(v, 'Fix Approved', `at ${fmtTime(c.time)}: "${truncateText(c.text, 80)}"`);
+    await saveState();
+    renderCommentsPanel();
+    renderResolvedPanel();
+  },
+  async followup(el, id) {
+    const v = findVideo(activeVideoId);
+    const c = v.comments.find(x => x.id === id);
+    const txt = prompt('Follow-up note:');
+    if (txt) {
+      c.fixStatus = 'followup'; c.followupText = txt; c.devStatus = null;
+      logAudit(v, 'Follow-up Added', `at ${fmtTime(c.time)} — Note: "${txt}"`);
+    }
+    await saveState();
+    renderCommentsPanel();
+    renderResolvedPanel();
+  },
+  async markAllFixed() {
+    const v = findVideo(activeVideoId);
+    let count = 0;
+    v.comments.forEach(c => { if (c.devStatus === 'addressed' && c.fixStatus !== 'approved') { c.fixStatus = 'approved'; count++; } });
+    if (count > 0) logAudit(v, 'Bulk Approve', `${count} addressed comment(s) marked approved`);
+    await saveState();
+    renderCommentsPanel();
+    renderResolvedPanel();
+  },
+  prevComment() {
+    const v = findVideo(activeVideoId);
+    if (!v.comments.length) return;
+    activeCommentIndex = (activeCommentIndex - 1 + v.comments.length) % v.comments.length;
+    const c = v.comments[activeCommentIndex];
+    document.getElementById('reviewVideo').currentTime = c.time;
+    document.getElementById('cmt_' + c.id)?.scrollIntoView({behavior:'smooth'});
+  },
+  nextComment() {
+    const v = findVideo(activeVideoId);
+    if (!v.comments.length) return;
+    activeCommentIndex = (activeCommentIndex + 1) % v.comments.length;
+    const c = v.comments[activeCommentIndex];
+    document.getElementById('reviewVideo').currentTime = c.time;
+    document.getElementById('cmt_' + c.id)?.scrollIntoView({behavior:'smooth'});
+  },
+
+  async rollback() {
+    const v = findVideo(activeVideoId);
+    const prevRound = v.round;
+    v.round += 1;
+    v.status = 'fixed'; v.lock = null;
+    logAudit(v, 'Rollback', `Reviewer rolled back from Signed Off. Round ${prevRound} → ${v.round}`);
+    logAudit(v, 'Status Change', 'signed_off → fixed');
+    await saveState();
+    toast('Rolled back to Fix stage. New round started: R' + v.round);
+    screen = 'dashboard'; render();
+  },
+
+  /* ---- Auto URL scan using Tesseract.js ---- */
+  async autoScanUrls() {
+    const video = document.getElementById('reviewVideo');
+    if (!video.src) { toast('Browse a video first'); return; }
+    if (!video.duration || isNaN(video.duration)) { toast('Video not ready yet'); return; }
+    pendingObservations = [];
+    scanAbort = false;
+    const progressEl = document.getElementById('scanProgress');
+    const duration = video.duration;
+    for (let t = 0; t < duration && !scanAbort; t += 5) {
+      progressEl.textContent = `Scanning ${fmtTime(t)} / ${fmtTime(duration)}...`;
+      await seekVideo(video, t);
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const regions = cornerRegions(canvas);
+      for (const r of regions) {
+        try {
+          const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
+          const urls = extractUrls(text);
+          if (urls.length) {
+            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: canvas.toDataURL('image/jpeg', 0.92) });
+          }
+        } catch (e) { /* ignore OCR error for this region */ }
+      }
+      renderObservations();
+    }
+    progressEl.textContent = `Scan complete. ${pendingObservations.length} observation(s) found.`;
+  },
+
+  acceptObs(el, id) {
+    const obs = pendingObservations.find(o => o.id === id);
+    const v = findVideo(activeVideoId);
+    v.comments.push({
+      id: uid(), time: obs.time, screenshot: obs.screenshot, text: `URL detected (${obs.corner}): ${obs.text}`,
+      type:'text', source:'url-auto', loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
+      devStatus: null, devNote:'', fixStatus: null, followupText:''
+    });
+    logAudit(v, 'Comment Added', `[auto-url] at ${fmtTime(obs.time)}: ${obs.corner} — ${obs.text}`);
+    pendingObservations = pendingObservations.filter(o => o.id !== id);
+    saveState().then(() => { renderObservations(); renderCommentsPanel(); renderResolvedPanel(); });
+  },
+  rejectObs(el, id) {
+    pendingObservations = pendingObservations.filter(o => o.id !== id);
+    renderObservations();
+  }
+};
+
+function seekVideo(video, t) {
+  return new Promise(res => {
+    const onSeek = () => { video.removeEventListener('seeked', onSeek); res(); };
+    video.addEventListener('seeked', onSeek);
+    video.currentTime = t;
+  });
+}
+function cornerRegions(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const cw = Math.floor(w * 0.28), ch = Math.floor(h * 0.28);
+  const coords = [['TopLeft',0,0], ['TopRight', w - cw, 0], ['BottomLeft', 0, h - ch], ['BottomRight', w - cw, h - ch]];
+  return coords.map(([label, x, y]) => {
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    c.getContext('2d').drawImage(canvas, x, y, cw, ch, 0, 0, cw, ch);
+    return { label, canvas: c };
+  });
+}
+function extractUrls(text) {
+  const re = /((https?:\/\/|www\.)[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|gov|edu)[^\s]*)/gi;
+  return text.match(re) || [];
+}
+function renderObservations() {
+  const area = document.getElementById('obsArea');
+  if (!area) return;
+  area.innerHTML = pendingObservations.map(o => `
+    <div class="obs-card">
+      <div class="meta">⏱ ${fmtTime(o.time)} — ${o.corner}</div>
+      <div><b>${o.text}</b></div>
+      <img src="${o.screenshot}" style="width:150px;border-radius:4px">
+      <div class="flexgap"><button class="success" data-action="acceptObs" data-id="${o.id}">Accept</button><button class="danger" data-action="rejectObs" data-id="${o.id}">Reject</button></div>
+    </div>`).join('');
+}
+
+/* ============== EVENT DELEGATION ============== */
+document.getElementById('app').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  e.preventDefault();
+  const fn = actions[el.dataset.action];
+  if (fn) fn(el, el.dataset.id, e);
+});
+
+/* ============== INIT ============== */
+render();
+</script>
+</body>
 </html>
