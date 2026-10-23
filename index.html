@@ -1001,11 +1001,11 @@ const actions = {
     const v = findVideo(activeVideoId);
     const currentTimeAtSubmit = video.currentTime;
     const canvas = document.createElement('canvas');
-    const MAX_W = 1280;
+    const MAX_W = 640;
     canvas.width = Math.min(video.videoWidth || MAX_W, MAX_W);
     canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    const screenshotDataUrl = captureScreenshot(canvas, 0.92);
+    const screenshotDataUrl = captureScreenshot(canvas, 0.6);
     const commentType = recognition ? 'voice' : 'text';
     const newComment = {
       id: uid(), time: currentTimeAtSubmit, screenshot: screenshotDataUrl,
@@ -1224,7 +1224,7 @@ const actions = {
           const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
           const urls = extractUrls(text);
           if (urls.length) {
-            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: captureScreenshot(canvas, 0.92) });
+            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: captureScreenshot(canvas, 0.6) });
           }
         } catch (e) { /* ignore OCR error for this region */ }
       }
