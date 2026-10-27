@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -60,7 +75,6 @@
   .perm-table td, .perm-table th{font-size:13px}
   .audit-row td{font-size:13px;overflow-wrap:break-word;word-wrap:break-word}
   .audit-action{font-weight:600;color:#1d4ed8}
-  .locked-note{color:#9333ea;font-weight:600}
 </style>
 </head>
 <body>
@@ -79,176 +93,15 @@ let pendingObservations = [];
 let scanAbort = false;
 let recognition = null;
 let activeCommentIndex = 0;
+
 let videoSrcCache = {};
 let videoTimeCache = {};
 function cacheKey(v) { return v.id + '_r' + v.round; }
+
 let statusFilters = { app:'', status:'', videoSearch:'' };
+
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const nowStr = () => new Date().toLocaleString();
-
-/* =========================================================
-   OPTION A: MERGE-ON-SAVE PERSISTENCE LAYER
-   Instead of blindly overwriting the shared JSON file, every
-   write re-reads the current file, merges in only the specific
-   deltas this session produced (localChanges), and writes the
-   merged result back. This drastically reduces (but does not
-   100% eliminate) OneDrive "conflicted copy" situations caused
-   by two people's whole-file overwrites colliding.
-   ========================================================= */
-function resetLocalChanges() {
-  return {
-    newVideos: [],          // [videoObj, ...]
-    videoPatches: {},       // videoId -> {status, round, lock, name, durationSec, ...}
-    newComments: [],        // [{videoId, comment}]
-    updatedComments: {},    // commentId -> partial patch object
-    deletedCommentIds: [],  // [commentId, ...]
-    auditEntries: []        // [{videoId, entry}]
-  };
-}
-let localChanges = resetLocalChanges();
-
-function isChangesEmpty(c) {
-  return c.newVideos.length === 0 &&
-    Object.keys(c.videoPatches).length === 0 &&
-    c.newComments.length === 0 &&
-    Object.keys(c.updatedComments).length === 0 &&
-    c.deletedCommentIds.length === 0 &&
-    c.auditEntries.length === 0;
-}
-function queueVideoPatch(videoId, patch) {
-  localChanges.videoPatches[videoId] = { ...(localChanges.videoPatches[videoId] || {}), ...patch };
-}
-function queueCommentUpdate(commentId, patch) {
-  localChanges.updatedComments[commentId] = { ...(localChanges.updatedComments[commentId] || {}), ...patch };
-}
-function cloneObj(o) { return JSON.parse(JSON.stringify(o)); }
-
-/* ---- Merge logic: applies localChanges on top of a freshly-read disk state ---- */
-function mergeChanges(diskState, changes) {
-  const merged = diskState ? cloneObj(diskState) : { videos: [] };
-  if (!merged.videos) merged.videos = [];
-  const conflicts = [];
-
-  // 1. New videos (added if not already present)
-  changes.newVideos.forEach(v => {
-    if (!merged.videos.find(x => x.id === v.id)) merged.videos.push(cloneObj(v));
-  });
-
-  // 2. Video-level field patches, with lock-conflict protection
-  Object.entries(changes.videoPatches).forEach(([videoId, patch]) => {
-    const v = merged.videos.find(x => x.id === videoId);
-    if (!v) return;
-    if (Object.prototype.hasOwnProperty.call(patch, 'lock') && patch.lock) {
-      // Trying to ACQUIRE a lock - verify against the fresh disk truth
-      if (v.lock && v.lock.role && !(v.lock.by === patch.lock.by && v.lock.role === patch.lock.role)) {
-        conflicts.push({ videoId, reason: `Already locked by ${v.lock.role} (${v.lock.by})` });
-        return; // reject the whole patch (status/round/lock stay as on disk)
-      }
-    }
-    Object.assign(v, patch);
-  });
-
-  // 3. New comments (added if not already present, by id)
-  changes.newComments.forEach(({ videoId, comment }) => {
-    const v = merged.videos.find(x => x.id === videoId);
-    if (v && !v.comments.find(c => c.id === comment.id)) v.comments.push(cloneObj(comment));
-  });
-
-  // 4. Comment field patches (edit text, devStatus, fixStatus, locked, etc.)
-  Object.entries(changes.updatedComments).forEach(([commentId, patch]) => {
-    for (const v of merged.videos) {
-      const c = v.comments.find(x => x.id === commentId);
-      if (c) { Object.assign(c, patch); break; }
-    }
-  });
-
-  // 5. Deleted comments
-  changes.deletedCommentIds.forEach(id => {
-    merged.videos.forEach(v => { v.comments = v.comments.filter(c => c.id !== id); });
-  });
-
-  // 6. Audit entries - idempotent by entry id (avoids double-logging)
-  changes.auditEntries.forEach(({ videoId, entry }) => {
-    const v = merged.videos.find(x => x.id === videoId);
-    if (v) {
-      if (!v.auditLog) v.auditLog = [];
-      if (!v.auditLog.find(e => e.id === entry.id)) v.auditLog.push(entry);
-    }
-  });
-
-  return { merged, conflicts };
-}
-
-async function readDiskState() {
-  if (useLocalStorageFallback) {
-    const saved = localStorage.getItem('vrt_data');
-    try { return saved ? JSON.parse(saved) : { videos: [] }; }
-    catch (e) { console.error('Parse error reading disk state', e); return null; }
-  }
-  if (!fileHandle) return null;
-  try {
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    return text ? JSON.parse(text) : { videos: [] };
-  } catch (e) {
-    console.error('Error reading disk state', e);
-    return null;
-  }
-}
-async function writeDiskState(obj) {
-  if (useLocalStorageFallback) {
-    obj.__lastModified = Date.now();
-    localStorage.setItem('vrt_data', JSON.stringify(obj));
-    return;
-  }
-  if (!fileHandle) return;
-  const writable = await fileHandle.createWritable();
-  await writable.write(JSON.stringify(obj, null, 2));
-  await writable.close();
-  const file = await fileHandle.getFile();
-  obj.__lastModified = file.lastModified;
-}
-
-/* Call this after mutating local `state` to persist changes safely */
-async function commitChanges() {
-  if (isChangesEmpty(localChanges)) return { conflicts: [] };
-  const disk = await readDiskState();
-  const base = disk || state;
-  const { merged, conflicts } = mergeChanges(base, localChanges);
-  try {
-    await writeDiskState(merged);
-  } catch (e) {
-    console.error('Write failed', e);
-    toast('⚠️ Could not save changes — will retry on next action.');
-    return { conflicts: [] };
-  }
-  state = merged;
-  localChanges = resetLocalChanges();
-  if (conflicts.length) {
-    conflicts.forEach(c => toast(`⚠️ ${c.reason} — your change was not applied. Data refreshed.`));
-  }
-  return { conflicts };
-}
-
-/* Pure read-only refresh used by heartbeat polling (no local changes to merge) */
-async function refreshFromDisk() {
-  const disk = await readDiskState();
-  if (!disk) return false;
-  if (disk.__lastModified === state.__lastModified) return false;
-  state = disk;
-  return true;
-}
-
-/* ============== AUDIT TRAIL HELPER ============== */
-function logAudit(v, action, details) {
-  if (!v.auditLog) v.auditLog = [];
-  const entry = {
-    id: uid(), at: nowStr(), by: currentUser.name || 'unknown',
-    role: currentUser.role || 'unknown', action, details: details || ''
-  };
-  v.auditLog.push(entry);
-  localChanges.auditEntries.push({ videoId: v.id, entry });
-}
 
 /* ============== TEXT HELPERS ============== */
 function truncateText(text, maxLen) {
@@ -258,6 +111,7 @@ function truncateText(text, maxLen) {
   const safeCut = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
   return safeCut.trim() + '...';
 }
+
 /* ============== WEBP SUPPORT + JPEG FALLBACK ============== */
 let webpSupported = null;
 function supportsWebP() {
@@ -274,7 +128,17 @@ function captureScreenshot(canvas, quality) {
   if (supportsWebP()) return canvas.toDataURL('image/webp', quality);
   return canvas.toDataURL('image/jpeg', quality);
 }
-/* ============== FILE PICKING ============== */
+
+/* ============== AUDIT TRAIL HELPER ============== */
+function logAudit(v, action, details) {
+  if (!v.auditLog) v.auditLog = [];
+  v.auditLog.push({
+    id: uid(), at: nowStr(), by: currentUser.name || 'unknown',
+    role: currentUser.role || 'unknown', action, details: details || ''
+  });
+}
+
+/* ============== PERSISTENCE ============== */
 async function pickFile(create) {
   try {
     if (create) {
@@ -283,13 +147,12 @@ async function pickFile(create) {
         types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
       });
       state = { videos: [], __lastModified: null };
-      await writeDiskState(state);
+      await saveState();
     } else {
       [fileHandle] = await window.showOpenFilePicker({
         types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
       });
-      const disk = await readDiskState();
-      state = disk || { videos: [], __lastModified: null };
+      await loadState();
     }
     toast('Data file connected: ' + fileHandle.name);
   } catch (e) {
@@ -301,10 +164,76 @@ async function pickFile(create) {
     }
   }
 }
+
+async function loadState() {
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) {
+      try {
+        state = JSON.parse(saved);
+      } catch (e) {
+        console.error('JSON parse error (localStorage):', e);
+        toast('⚠️ Data appears corrupted — keeping last known good data in memory.');
+      }
+    }
+    return;
+  }
+  if (!fileHandle) return;
+  let file, text;
+  try {
+    file = await fileHandle.getFile();
+    text = await file.text();
+  } catch (e) {
+    console.error('Error reading file:', e);
+    toast('⚠️ Could not read the data file. Please check it is still accessible.');
+    return;
+  }
+  try {
+    const parsed = text ? JSON.parse(text) : { videos: [], __lastModified: null };
+    state = parsed;
+    state.__lastModified = file.lastModified;
+  } catch (e) {
+    console.error('JSON parse error (file):', e);
+    toast('⚠️ Data file appears corrupted or incomplete — changes were not loaded. Please check the file.');
+  }
+}
+
+async function saveState() {
+  if (useLocalStorageFallback) {
+    state.__lastModified = Date.now();
+    localStorage.setItem('vrt_data', JSON.stringify(state));
+    return;
+  }
+  if (!fileHandle) return;
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(state, null, 2));
+  await writable.close();
+  const file = await fileHandle.getFile();
+  state.__lastModified = file.lastModified;
+}
+
 async function heartbeat() {
   let changed = false;
-  try { changed = await refreshFromDisk(); }
-  catch (e) { /* ignore transient read errors */ }
+  if (useLocalStorageFallback) {
+    const saved = localStorage.getItem('vrt_data');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.__lastModified !== state.__lastModified) { state = parsed; changed = true; }
+      } catch (e) {
+        console.error('JSON parse error (heartbeat, localStorage):', e);
+      }
+    }
+  } else if (fileHandle) {
+    try {
+      const file = await fileHandle.getFile();
+      if (file.lastModified !== state.__lastModified) {
+        const before = state.__lastModified;
+        await loadState();
+        if (state.__lastModified !== before) changed = true;
+      }
+    } catch (e) { /* ignore transient read errors */ }
+  }
   if (!changed) return;
   toast('Synced latest changes from file');
   if (screen === 'review') { renderCommentsPanel(); renderResolvedPanel(); }
@@ -312,6 +241,7 @@ async function heartbeat() {
   else render();
 }
 setInterval(heartbeat, 4000);
+
 /* ============== UTIL ============== */
 function toast(msg) {
   const t = document.createElement('div');
@@ -333,8 +263,10 @@ function openLightbox(src) {
   bg.addEventListener('click', () => bg.remove());
   document.body.appendChild(bg);
 }
+
 /* ============== SCREENS ============== */
 const screens = {};
+
 screens.init = function () {
   document.getElementById('app').innerHTML = `
   <div class="center-card">
@@ -360,6 +292,7 @@ screens.init = function () {
     if (btn) btn.disabled = !currentUser.role || !e.target.value.trim() || (!fileHandle && !useLocalStorageFallback);
   });
 };
+
 screens.dashboard = function () {
   const rows = state.videos.map(v => {
     const act = getAction(v);
@@ -404,14 +337,17 @@ screens.dashboard = function () {
     </table>
   </div>`;
 };
+
 /* ===== Status Overview with Filters ===== */
 screens.statusDashboard = function () {
   const apps = [...new Set(state.videos.map(v => v.appName).filter(Boolean))];
   const statuses = [...new Set(state.videos.map(v => v.status))];
+
   let list = state.videos.slice();
   if (statusFilters.app) list = list.filter(v => v.appName === statusFilters.app);
   if (statusFilters.status) list = list.filter(v => v.status === statusFilters.status);
   if (statusFilters.videoSearch) list = list.filter(v => v.name.toLowerCase().includes(statusFilters.videoSearch.toLowerCase()));
+
   const rows = list.map(v => {
     const rounds = {};
     v.comments.forEach(c => {
@@ -437,6 +373,7 @@ screens.statusDashboard = function () {
       <td><span class="badge b-${v.status}">${v.status.replace('_',' ')}</span><br><span class="small">${withWhom}</span></td>
     </tr>`;
   }).join('');
+
   document.getElementById('app').innerHTML = `
   <div class="topbar">
     <div><b>Status Overview</b> — ${currentUser.name} (${currentUser.role})</div>
@@ -474,10 +411,12 @@ screens.statusDashboard = function () {
       <tbody>${rows || '<tr><td colspan=5>No matching videos.</td></tr>'}</tbody>
     </table>
   </div>`;
+
   document.getElementById('filterApp').addEventListener('change', (e) => { statusFilters.app = e.target.value; screens.statusDashboard(); });
   document.getElementById('filterStatus').addEventListener('change', (e) => { statusFilters.status = e.target.value; screens.statusDashboard(); });
   document.getElementById('filterVideo').addEventListener('input', (e) => { statusFilters.videoSearch = e.target.value; screens.statusDashboard(); });
 };
+
 /* ===== How To Use Page ===== */
 screens.howto = function () {
   document.getElementById('app').innerHTML = `
@@ -485,9 +424,11 @@ screens.howto = function () {
     <div><b>How to Use This Tool</b></div>
     <button class="secondary" data-action="backFromHowTo">Back</button>
   </div>
+
   <div style="background:#fff;padding:20px;border-radius:8px;margin-bottom:16px">
     <h2>Overview</h2>
-    <p>This tool helps Reviewers and Developers collaborate on fixing issues found in review videos, entirely from your browser — no server required. All data is stored in a shared JSON file. Saves use a read-merge-write pattern so concurrent edits from different people are combined rather than overwritten.</p>
+    <p>This tool helps Reviewers and Developers collaborate on fixing issues found in review videos, entirely from your browser — no server required. All data is stored in a shared JSON file, synced via periodic heartbeat checks.</p>
+
     <h3>Getting Started</h3>
     <ol>
       <li>On the launch screen, choose your role: <b>Reviewer</b> or <b>Developer</b>.</li>
@@ -495,44 +436,50 @@ screens.howto = function () {
       <li>Open the shared data file (JSON), or create a new one on first-time setup.</li>
       <li>Click Continue to reach your Dashboard / Video Queue.</li>
     </ol>
+
     <h3>Developer: Adding a Video</h3>
     <p>Developers add a new video entry (Application Name + Video Name) to the queue. The developer who created an entry can later rename it using "Edit Name".</p>
+
     <h3>Reviewer: Logging Issues (Round 1)</h3>
     <ol>
       <li>Click "Start Review" — locks the entry for you exclusively.</li>
       <li>Browse and select the local MP4 file.</li>
       <li>Optionally click "Auto Review for URLs" to scan for on-screen URLs. Accept or reject each one.</li>
       <li>Add comments by typing or using the 🎤 mic button. Clicking into the comment box auto-pauses the video. The field clears automatically after adding.</li>
-      <li>Edit or delete any comment you've logged while the round is still open.</li>
-      <li>Click "Review Complete" when done — this locks all comments logged in this round from further editing.</li>
+      <li>Click "Review Complete" when done.</li>
     </ol>
+
     <h3>Developer: Fixing Issues</h3>
     <ol>
       <li>Click "Start Fix" — locks the entry for you.</li>
       <li>Mark each comment "Addressed" or "Can't Fix".</li>
       <li>Once all comments are marked, click "All Fixes Completed" — confirm the SharePoint upload. This releases the lock and sends it back to the Reviewer.</li>
     </ol>
+
     <h3>Reviewer: Validation Rounds</h3>
     <ol>
       <li>Click "Start Validation Rx" — increments the round and locks the video for you.</li>
       <li>Browse the updated video file.</li>
-      <li>Approve fixes or add follow-ups. Add new comments if needed — new comments remain editable until this round is completed.</li>
+      <li>Approve fixes or add follow-ups. Add new comments if needed.</li>
       <li>Click "Review Complete" — if everything is approved, the video is Signed Off; otherwise it returns to the Developer.</li>
     </ol>
-    <h3>Comment Locking</h3>
-    <p>Reviewers can Edit or Delete any comment while its round is still in progress. Once "Review Complete" is clicked, all comments logged during that round become locked (read-only) permanently. Any new comment logged in a later round is editable until that round, too, is completed.</p>
+
     <h3>Rollback</h3>
     <p>Only the Reviewer can roll back a Signed Off video to the Fix stage. This starts a new round automatically.</p>
+
+    <h3>Deleting Comments</h3>
+    <p>Deleting a comment now asks for confirmation first, since this action cannot be undone.</p>
   </div>
+
   <div class="flow-wrap">
     <h3>Review Lifecycle Flowchart</h3>
     <div class="flow-col">
       <div class="flow-box">Developer adds Video<br><span class="small">(Pending Review)</span></div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Review<br><span class="small">🔒 Locked for Reviewer</span></div>
-      <div class="flow-note">Browse video, auto-scan URLs, log/edit/delete comments</div>
+      <div class="flow-note">Browse video, auto-scan URLs, log comments</div>
       <div class="flow-arrow">↓</div>
-      <div class="flow-box">Reviewer: Review Complete<br><span class="small">(Status: Reviewed, comments locked)</span></div>
+      <div class="flow-box">Reviewer: Review Complete<br><span class="small">(Status: Reviewed)</span></div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box" style="border-color:#d97706;background:#fffbeb">Developer: Start Fix<br><span class="small">🔒 Locked for Developer</span></div>
       <div class="flow-note">Mark each comment Addressed / Can't Fix</div>
@@ -540,9 +487,9 @@ screens.howto = function () {
       <div class="flow-box">Developer: All Fixes Completed<br><span class="small">(Confirm upload)</span></div>
       <div class="flow-arrow">↓</div>
       <div class="flow-box" style="border-color:#16a34a;background:#f0fdf4">Reviewer: Start Validation (Round+1)<br><span class="small">🔒 Locked for Reviewer</span></div>
-      <div class="flow-note">Approve fixes or raise follow-ups; add new (editable) comments if needed</div>
+      <div class="flow-note">Approve fixes or raise follow-ups; add new comments if needed</div>
       <div class="flow-arrow">↓</div>
-      <div class="flow-box">Reviewer: Review Complete<br><span class="small">(comments for this round locked)</span></div>
+      <div class="flow-box">Reviewer: Review Complete</div>
       <div class="flow-arrow">↓</div>
       <div style="display:flex;gap:40px;align-items:flex-start">
         <div class="flow-col">
@@ -556,23 +503,25 @@ screens.howto = function () {
       </div>
     </div>
   </div>
+
   <div style="background:#fff;padding:20px;border-radius:8px;margin-top:16px">
     <h3>Role Permissions Matrix</h3>
     <table class="perm-table">
       <thead><tr><th>Stage</th><th>Reviewer Can</th><th>Developer Can</th></tr></thead>
       <tbody>
         <tr><td>Pending Review</td><td>Start Review (acquires lock)</td><td>Add new videos; rename their own entries</td></tr>
-        <tr><td>In Review</td><td>Log/edit/delete comments (if unlocked), auto-scan URLs, submit Review Complete</td><td>View only</td></tr>
+        <tr><td>In Review</td><td>Log/edit/delete comments, auto-scan URLs, submit Review Complete</td><td>View only</td></tr>
         <tr><td>Reviewed</td><td>Waiting</td><td>Start Fix (acquires lock)</td></tr>
         <tr><td>In Fix</td><td>View only</td><td>Mark comments, confirm upload, complete fixes</td></tr>
         <tr><td>Fixed</td><td>Start Validation (acquires lock, increments round)</td><td>Waiting</td></tr>
-        <tr><td>In Validation</td><td>Approve fixes, follow-ups, new comments (editable), Review Complete</td><td>View only</td></tr>
+        <tr><td>In Validation</td><td>Approve fixes, follow-ups, new comments, Review Complete</td><td>View only</td></tr>
         <tr><td>Signed Off</td><td>View; Rollback</td><td>View only</td></tr>
       </tbody>
     </table>
   </div>
   `;
 };
+
 /* ===== Audit Trail Screen ===== */
 screens.auditTrail = function () {
   const v = findVideo(activeVideoId);
@@ -596,6 +545,7 @@ screens.auditTrail = function () {
     </table>
   </div>`;
 };
+
 function getAction(v) {
   const role = currentUser.role;
   const mine = v.lock && v.lock.by === currentUser.name && v.lock.role === role;
@@ -619,6 +569,7 @@ function getAction(v) {
       return { label: role === 'reviewer' ? 'View / Rollback' : 'Signed Off (view only)', action: 'openSignedOff' };
   }
 }
+
 /* =========================================================
    REVIEW SCREEN
    ========================================================= */
@@ -652,15 +603,18 @@ screens.review = function () {
   renderCommentsPanel();
   renderResolvedPanel();
 };
+
 function renderCommentsPanel() {
   const panel = document.getElementById('commentsPanel');
   if (!panel) return;
   const v = findVideo(activeVideoId);
   const validation = v.status === 'in_validation';
   const openComments = v.comments.filter(c => c.fixStatus !== 'approved');
+
   const existingTa = document.getElementById('commentText');
   const preservedText = existingTa ? existingTa.value : '';
   const micOn = !!recognition;
+
   panel.innerHTML = `
     <div class="entry-box">
       <textarea id="commentText" rows="2" placeholder="Type a comment..." data-action-focus="pause">${preservedText}</textarea>
@@ -670,10 +624,12 @@ function renderCommentsPanel() {
     <h3>Open Comments (${openComments.length}) ${validation ? `<button class="secondary" data-action="prevComment">◀ Prev</button><button class="secondary" data-action="nextComment">Next ▶</button>` : ''}</h3>
     ${openComments.map((c) => renderCommentCard(c, validation)).join('') || '<p class="small">No open comments. 🎉</p>'}
   `;
+
   const ta = document.getElementById('commentText');
   const video = document.getElementById('reviewVideo');
   ta.addEventListener('focus', () => { if (video && !video.paused) video.pause(); });
 }
+
 function renderResolvedPanel() {
   const panel = document.getElementById('resolvedPanel');
   if (!panel) return;
@@ -681,9 +637,7 @@ function renderResolvedPanel() {
   const resolved = v.comments.filter(c => c.fixStatus === 'approved');
   panel.innerHTML = `
     <h3>✅ Approved / Resolved Issues (${resolved.length})</h3>
-    ${resolved.map(c => {
-      const canModify = currentUser.role === 'reviewer' && !c.locked;
-      return `
+    ${resolved.map(c => `
       <div class="comment-card resolved">
         <div class="comment-text">${c.text}</div>
         <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round}</div>
@@ -693,14 +647,12 @@ function renderResolvedPanel() {
         </div>
         <div class="meta">By ${c.loggedBy} on ${c.loggedAt}</div>
         <div class="small">Status: <b>Approved</b></div>
-        ${canModify ? `<div class="flexgap" style="margin-top:6px"><button class="warn" data-action="editComment" data-id="${c.id}">Edit</button><button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button></div>` : ''}
-        ${c.locked ? `<div class="small locked-note">🔒 Locked — review round completed</div>` : ''}
-      </div>`;
-    }).join('') || '<p class="small">Nothing approved yet.</p>'}
+      </div>`).join('') || '<p class="small">Nothing approved yet.</p>'}
   `;
 }
+
 function renderCommentCard(c, validation) {
-  const canModify = currentUser.role === 'reviewer' && !c.locked;
+  const isMineAndEditable = c.loggedBy === currentUser.name;
   return `<div class="comment-card" id="cmt_${c.id}">
     <div class="comment-text">${c.text}</div>
     <div class="meta">⏱ <a href="#" data-action="seekTo" data-id="${c.id}">${fmtTime(c.time)}</a> | Round ${c.round} | ${c.source} | ${c.type}</div>
@@ -714,17 +666,19 @@ function renderCommentCard(c, validation) {
       <div class="flexgap" style="margin-top:6px">
         <button class="success" data-action="approveFix" data-id="${c.id}" ${c.fixStatus==='approved'?'disabled':''}>Approve Fix</button>
         <button class="warn" data-action="followup" data-id="${c.id}">Add Follow-up</button>
-        ${canModify ? `<button class="warn" data-action="editComment" data-id="${c.id}">Edit</button><button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>` : ''}
+        ${isMineAndEditable ? `<button class="warn" data-action="editComment" data-id="${c.id}">Edit</button>` : ''}
+        ${isMineAndEditable ? `<button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>` : ''}
       </div>
       ${c.fixStatus ? `<div class="small">Fix Status: <b>${c.fixStatus}</b> ${c.followupText ? '- ' + c.followupText : ''}</div>` : ''}
-     `:`
+    ` : `
       <div class="flexgap" style="margin-top:6px">
-        ${canModify ? `<button class="warn" data-action="editComment" data-id="${c.id}">Edit</button><button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>` : ''}
+        ${isMineAndEditable ? `<button class="warn" data-action="editComment" data-id="${c.id}">Edit</button>` : ''}
+        <button class="secondary" data-action="deleteComment" data-id="${c.id}">Delete</button>
       </div>
     `}
-    ${c.locked ? `<div class="small locked-note">🔒 Locked — review round completed</div>` : ''}
   </div>`;
 }
+
 function attachVideoHandlers() {
   const video = document.getElementById('reviewVideo');
   if (!video) return;
@@ -734,18 +688,15 @@ function attachVideoHandlers() {
     if (!video.hasAttribute('src') && videoSrcCache[key]) {
       video.src = videoSrcCache[key];
     }
-    video.addEventListener('loadedmetadata', async () => {
-      if (!v.durationSec) {
-        v.durationSec = video.duration;
-        queueVideoPatch(v.id, { durationSec: video.duration });
-        await commitChanges();
-      }
+    video.addEventListener('loadedmetadata', () => {
+      if (!v.durationSec) { v.durationSec = video.duration; saveState(); }
       const t = videoTimeCache[key];
       if (t) video.currentTime = t;
     });
     video.addEventListener('timeupdate', () => { videoTimeCache[key] = video.currentTime; });
   }
 }
+
 /* =========================================================
    FIX SCREEN
    ========================================================= */
@@ -771,6 +722,7 @@ screens.fix = function () {
   renderFixPanel();
   renderFixResolvedPanel();
 };
+
 function renderFixPanel() {
   const panel = document.getElementById('fixPanel');
   if (!panel) return;
@@ -797,6 +749,7 @@ function renderFixPanel() {
     <button class="success" style="width:100%;margin-top:10px" data-action="allFixesComplete">All Fixes Completed</button>
   `;
 }
+
 function renderFixResolvedPanel() {
   const panel = document.getElementById('fixResolvedPanel');
   if (!panel) return;
@@ -817,6 +770,7 @@ function renderFixResolvedPanel() {
       </div>`).join('') || '<p class="small">Nothing addressed yet.</p>'}
   `;
 }
+
 screens.signedoff = function () {
   const v = findVideo(activeVideoId);
   document.getElementById('app').innerHTML = `
@@ -831,6 +785,7 @@ screens.signedoff = function () {
     ${currentUser.role === 'reviewer' ? `<button class="danger" data-action="rollback">Rollback to Fix Stage</button>` : ''}
   </div>`;
 };
+
 /* ============== ACTIONS ============== */
 const actions = {
   pickRole(el, id) { currentUser.role = id; screens.init(); },
@@ -844,7 +799,7 @@ const actions = {
     render();
   },
   logout() { currentUser = { name:'', role:'' }; screen = 'init'; render(); },
-  refreshNow: async () => { await refreshFromDisk(); render(); },
+  refreshNow: async () => { await loadState(); render(); },
   openStatusDashboard() { prevScreen = 'dashboard'; screen = 'statusDashboard'; render(); },
   openHowTo() { prevScreen = screen; screen = 'howto'; render(); },
   backFromHowTo() { screen = prevScreen || 'dashboard'; render(); },
@@ -852,9 +807,9 @@ const actions = {
   backFromAudit() { screen = prevScreen || 'dashboard'; render(); },
   clearStatusFilters() { statusFilters = { app:'', status:'', videoSearch:'' }; render(); },
   exportCsv() {
-    let rows = [['Video','Round','Timestamp','Comment','Source','LoggedBy','LoggedAt','DevStatus','FixStatus','Locked']];
+    let rows = [['Video','Round','Timestamp','Comment','Source','LoggedBy','LoggedAt','DevStatus','FixStatus']];
     state.videos.forEach(v => v.comments.forEach(c => {
-      rows.push([v.name, c.round, fmtTime(c.time), c.text.replace(/\n/g,' '), c.source, c.loggedBy, c.loggedAt, c.devStatus||'', c.fixStatus||'', c.locked ? 'yes' : 'no']);
+      rows.push([v.name, c.round, fmtTime(c.time), c.text.replace(/\n/g,' '), c.source, c.loggedBy, c.loggedAt, c.devStatus||'', c.fixStatus||'']);
     }));
     const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], {type:'text/csv'});
@@ -876,14 +831,15 @@ const actions = {
     const appName = document.getElementById('newAppName').value.trim();
     const name = document.getElementById('newVideoName').value.trim();
     if (!name) return;
+    await loadState();
     const newVideo = { id: uid(), appName, name, status:'pending_review', round:1, lock:null, addedBy: currentUser.name, addedAt: nowStr(), comments:[], durationSec:null, auditLog:[] };
     logAudit(newVideo, 'Video Created', `App: ${appName || 'N/A'}`);
-    localChanges.newVideos.push(newVideo);
     state.videos.push(newVideo);
-    await commitChanges();
+    await saveState();
     actions.closeModal();
     render();
   },
+
   openEditName(el, id) {
     const v = findVideo(id);
     if (!v) return;
@@ -911,55 +867,53 @@ const actions = {
     }
     const oldName = v.name;
     v.name = newName;
-    queueVideoPatch(v.id, { name: newName });
     logAudit(v, 'Video Renamed', `"${oldName}" → "${newName}"`);
-    await commitChanges();
+    await saveState();
     actions.closeEditNameModal();
     render();
   },
+
   async startReview(el, id) {
+    await loadState();
     const v = findVideo(id);
     if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
     v.status = 'in_review';
     v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
-    queueVideoPatch(v.id, { status:'in_review', lock: v.lock });
     logAudit(v, 'Lock Acquired', `Reviewer started Round ${v.round} review`);
     logAudit(v, 'Status Change', `pending_review → in_review`);
-    const { conflicts } = await commitChanges();
-    if (conflicts.find(c => c.videoId === id)) { render(); return; }
+    await saveState();
     activeVideoId = id; screen = 'review'; render();
   },
   openReview(el, id) { activeVideoId = id; screen = 'review'; render(); },
   async startFix(el, id) {
+    await loadState();
     const v = findVideo(id);
     if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'developer')) { toast('Locked by someone else'); render(); return; }
     v.status = 'in_fix';
     v.lock = { role:'developer', by: currentUser.name, at: nowStr() };
-    queueVideoPatch(v.id, { status:'in_fix', lock: v.lock });
     logAudit(v, 'Lock Acquired', `Developer started fixing Round ${v.round}`);
     logAudit(v, 'Status Change', `reviewed → in_fix`);
-    const { conflicts } = await commitChanges();
-    if (conflicts.find(c => c.videoId === id)) { render(); return; }
+    await saveState();
     activeVideoId = id; screen = 'fix'; render();
   },
   openFix(el, id) { activeVideoId = id; screen = 'fix'; render(); },
   async startValidation(el, id) {
+    await loadState();
     const v = findVideo(id);
     if (v.lock && v.lock.role && !(v.lock.by === currentUser.name && v.lock.role === 'reviewer')) { toast('Locked by someone else'); render(); return; }
     const prevRound = v.round;
     v.status = 'in_validation';
     v.round += 1;
     v.lock = { role:'reviewer', by: currentUser.name, at: nowStr() };
-    queueVideoPatch(v.id, { status:'in_validation', round: v.round, lock: v.lock });
     logAudit(v, 'Lock Acquired', `Reviewer started validation`);
     logAudit(v, 'Round Incremented', `R${prevRound} → R${v.round}`);
     logAudit(v, 'Status Change', `fixed → in_validation`);
-    const { conflicts } = await commitChanges();
-    if (conflicts.find(c => c.videoId === id)) { render(); return; }
+    await saveState();
     activeVideoId = id; screen = 'review'; render();
   },
   openSignedOff(el, id) { activeVideoId = id; screen = 'signedoff'; render(); },
   backToDashboard() { screen = 'dashboard'; render(); },
+
   browseVideo() {
     const input = document.getElementById('videoFileInput');
     input.onchange = () => {
@@ -973,6 +927,7 @@ const actions = {
     };
     input.click();
   },
+
   toggleMic() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { toast('Speech recognition not supported in this browser'); return; }
@@ -992,6 +947,7 @@ const actions = {
     recognition.start();
     btn.textContent = '⏹';
   },
+
   async submitComment() {
     const video = document.getElementById('reviewVideo');
     const textEl = document.getElementById('commentText');
@@ -1001,40 +957,39 @@ const actions = {
     const v = findVideo(activeVideoId);
     const currentTimeAtSubmit = video.currentTime;
     const canvas = document.createElement('canvas');
-    const MAX_W = 640;
+    const MAX_W = 1280;
     canvas.width = Math.min(video.videoWidth || MAX_W, MAX_W);
     canvas.height = canvas.width * (video.videoHeight / video.videoWidth);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    const screenshotDataUrl = captureScreenshot(canvas, 0.6);
+    const screenshotDataUrl = captureScreenshot(canvas, 0.92);
     const commentType = recognition ? 'voice' : 'text';
-    const newComment = {
+    v.comments.push({
       id: uid(), time: currentTimeAtSubmit, screenshot: screenshotDataUrl,
       text, type: commentType, source:'manual',
       loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
-      devStatus: null, devNote:'', fixStatus: null, followupText:'', editedAt: null,
-      locked: false
-    };
-    v.comments.push(newComment);
-    localChanges.newComments.push({ videoId: v.id, comment: newComment });
+      devStatus: null, devNote:'', fixStatus: null, followupText:'', editedAt: null
+    });
     logAudit(v, 'Comment Added', `[${commentType}] at ${fmtTime(currentTimeAtSubmit)}: "${truncateText(text, 80)}"`);
     textEl.value = '';
-    await commitChanges();
+    await saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
+
   seekTo(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
     const video = document.getElementById('reviewVideo');
     if (video && c) video.currentTime = c.time;
   },
+
   viewScreenshot(el) { openLightbox(el.dataset.src); },
-  async editComment(el, id) {
+
+  editComment(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
     if (!c) return;
-    if (currentUser.role !== 'reviewer') { toast('Only reviewers can edit comments'); return; }
-    if (c.locked) { toast('This comment is locked — its review round was already completed'); return; }
+    if (c.loggedBy !== currentUser.name) { toast('You can only edit your own comments'); return; }
     const newText = prompt('Edit comment:', c.text);
     if (newText === null) return;
     const trimmed = newText.trim();
@@ -1042,72 +997,59 @@ const actions = {
     const oldText = c.text;
     c.text = trimmed;
     c.editedAt = nowStr();
-    queueCommentUpdate(c.id, { text: trimmed, editedAt: c.editedAt });
     logAudit(v, 'Comment Edited', `"${truncateText(oldText,60)}" → "${truncateText(trimmed,60)}"`);
-    await commitChanges();
+    saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
+
   async deleteComment(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
     if (!c) return;
-    if (currentUser.role !== 'reviewer') { toast('Only reviewers can delete comments'); return; }
-    if (c.locked) { toast('This comment is locked — its review round was already completed'); return; }
+    if (c.loggedBy !== currentUser.name) { toast('You can only delete your own comments'); return; }
     const preview = truncateText(c.text, 100);
     const confirmDelete = confirm(`Are you sure you want to delete this comment?\n\n"${preview}"\n\nThis action cannot be undone.`);
     if (!confirmDelete) return;
     logAudit(v, 'Comment Deleted', `at ${fmtTime(c.time)}: "${preview}"`);
     v.comments = v.comments.filter(x => x.id !== id);
-    localChanges.deletedCommentIds.push(id);
-    await commitChanges();
+    await saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
+
   async reviewComplete() {
     const v = findVideo(activeVideoId);
-    // Lock all comments belonging to the round being completed (new comments in future rounds remain editable)
-    v.comments.forEach(c => {
-      if (c.round === v.round && !c.locked) {
-        c.locked = true;
-        queueCommentUpdate(c.id, { locked: true });
-      }
-    });
     if (v.status === 'in_review') {
       v.status = 'reviewed'; v.lock = null;
-      queueVideoPatch(v.id, { status:'reviewed', lock:null });
       logAudit(v, 'Lock Released', 'Reviewer submitted Round 1 review');
       logAudit(v, 'Status Change', 'in_review → reviewed');
-      logAudit(v, 'Comments Locked', `All Round ${v.round} comments locked from further editing`);
-      await commitChanges();
-      toast('Review submitted. Comments locked. Lock released for developer.');
+      await saveState();
+      toast('Review submitted. Locked released for developer.');
     } else if (v.status === 'in_validation') {
       const open = v.comments.filter(c => c.fixStatus !== 'approved');
       if (open.length === 0) {
         v.status = 'signed_off'; v.lock = { role:'locked', by:'system', at: nowStr() };
-        queueVideoPatch(v.id, { status:'signed_off', lock: v.lock });
         logAudit(v, 'Status Change', 'in_validation → signed_off');
         logAudit(v, 'Video Signed Off', `All comments approved in Round ${v.round}`);
         toast('All fixes approved — Video Signed Off!');
       } else {
         v.status = 'reviewed'; v.lock = null;
-        queueVideoPatch(v.id, { status:'reviewed', lock:null });
         logAudit(v, 'Lock Released', `Reviewer submitted validation Round ${v.round}, ${open.length} item(s) still open`);
         logAudit(v, 'Status Change', 'in_validation → reviewed');
         toast('Some items still open — sent back to developer.');
       }
-      logAudit(v, 'Comments Locked', `All Round ${v.round} comments locked from further editing`);
-      await commitChanges();
+      await saveState();
     }
     screen = 'dashboard'; render();
   },
+
   async markAddressed(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
     c.devStatus = 'addressed';
-    queueCommentUpdate(c.id, { devStatus: 'addressed' });
     logAudit(v, 'Comment Addressed', `at ${fmtTime(c.time)}: "${truncateText(c.text, 80)}"`);
-    await commitChanges();
+    await saveState();
     renderFixPanel();
     renderFixResolvedPanel();
   },
@@ -1116,9 +1058,8 @@ const actions = {
     const c = v.comments.find(x => x.id === id);
     c.devStatus = 'not-addressed';
     c.devNote = prompt('Reason / note:', c.devNote || '') || '';
-    queueCommentUpdate(c.id, { devStatus: 'not-addressed', devNote: c.devNote });
     logAudit(v, "Comment Marked Can't Fix", `at ${fmtTime(c.time)} — Note: "${c.devNote}"`);
-    await commitChanges();
+    await saveState();
     renderFixPanel();
     renderFixResolvedPanel();
   },
@@ -1129,22 +1070,21 @@ const actions = {
     const confirmUpload = confirm('Confirm: Have you uploaded the latest MP4 file to SharePoint?');
     if (confirmUpload) {
       v.status = 'fixed'; v.lock = null;
-      queueVideoPatch(v.id, { status:'fixed', lock:null });
       logAudit(v, 'Lock Released', `Developer completed all fixes for Round ${v.round}`);
       logAudit(v, 'Status Change', 'in_fix → fixed');
       logAudit(v, 'SharePoint Upload Confirmed', '');
-      await commitChanges();
+      await saveState();
       toast('Marked fixed and uploaded. Sent to reviewer.');
       screen = 'dashboard'; render();
     }
   },
+
   async approveFix(el, id) {
     const v = findVideo(activeVideoId);
     const c = v.comments.find(x => x.id === id);
     c.fixStatus = 'approved';
-    queueCommentUpdate(c.id, { fixStatus: 'approved' });
     logAudit(v, 'Fix Approved', `at ${fmtTime(c.time)}: "${truncateText(c.text, 80)}"`);
-    await commitChanges();
+    await saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
@@ -1154,25 +1094,18 @@ const actions = {
     const txt = prompt('Follow-up note:');
     if (txt) {
       c.fixStatus = 'followup'; c.followupText = txt; c.devStatus = null;
-      queueCommentUpdate(c.id, { fixStatus: 'followup', followupText: txt, devStatus: null });
       logAudit(v, 'Follow-up Added', `at ${fmtTime(c.time)} — Note: "${txt}"`);
     }
-    await commitChanges();
+    await saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
   async markAllFixed() {
     const v = findVideo(activeVideoId);
     let count = 0;
-    v.comments.forEach(c => {
-      if (c.devStatus === 'addressed' && c.fixStatus !== 'approved') {
-        c.fixStatus = 'approved';
-        queueCommentUpdate(c.id, { fixStatus: 'approved' });
-        count++;
-      }
-    });
+    v.comments.forEach(c => { if (c.devStatus === 'addressed' && c.fixStatus !== 'approved') { c.fixStatus = 'approved'; count++; } });
     if (count > 0) logAudit(v, 'Bulk Approve', `${count} addressed comment(s) marked approved`);
-    await commitChanges();
+    await saveState();
     renderCommentsPanel();
     renderResolvedPanel();
   },
@@ -1192,18 +1125,31 @@ const actions = {
     document.getElementById('reviewVideo').currentTime = c.time;
     document.getElementById('cmt_' + c.id)?.scrollIntoView({behavior:'smooth'});
   },
+
   async rollback() {
     const v = findVideo(activeVideoId);
     const prevRound = v.round;
     v.round += 1;
     v.status = 'fixed'; v.lock = null;
-    queueVideoPatch(v.id, { status:'fixed', round: v.round, lock:null });
     logAudit(v, 'Rollback', `Reviewer rolled back from Signed Off. Round ${prevRound} → ${v.round}`);
     logAudit(v, 'Status Change', 'signed_off → fixed');
-    await commitChanges();
+    await saveState();
     toast('Rolled back to Fix stage.');
     screen = 'dashboard'; render();
   },
+
+  /* =========================================================
+     AUTO URL SCAN — FIXED
+     Previously, a single on-screen URL that wrapped across two
+     OCR'd text lines was being split into two unrelated
+     "Possible URL/link detected" entries (e.g., one fragment
+     ending at "dev265229" and a second fragment starting with
+     "service-now.com/..."). This caused duplicate, broken
+     observations instead of one clean, complete URL.
+     Fix: normalize OCR text (collapse line breaks/extra spaces)
+     before running the URL regex, and widen the bottom corner
+     crop regions so longer URL bars aren't cut off mid-string.
+     ========================================================= */
   async autoScanUrls() {
     const video = document.getElementById('reviewVideo');
     if (!video.src) { toast('Browse a video first'); return; }
@@ -1224,7 +1170,7 @@ const actions = {
           const { data: { text } } = await Tesseract.recognize(r.canvas, 'eng');
           const urls = extractUrls(text);
           if (urls.length) {
-            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: captureScreenshot(canvas, 0.6) });
+            pendingObservations.push({ id: uid(), time: t, corner: r.label, text: urls.join(', '), screenshot: captureScreenshot(canvas, 0.92) });
           }
         } catch (e) { /* ignore OCR error for this region */ }
       }
@@ -1232,27 +1178,25 @@ const actions = {
     }
     progressEl.textContent = `Scan complete. ${pendingObservations.length} observation(s) found.`;
   },
-  async acceptObs(el, id) {
+
+  acceptObs(el, id) {
     const obs = pendingObservations.find(o => o.id === id);
     const v = findVideo(activeVideoId);
-    const newComment = {
+    v.comments.push({
       id: uid(), time: obs.time, screenshot: obs.screenshot, text: `URL detected (${obs.corner}): ${obs.text}`,
       type:'text', source:'url-auto', loggedBy: currentUser.name, loggedAt: nowStr(), round: v.round,
-      devStatus: null, devNote:'', fixStatus: null, followupText:'', editedAt: null,
-      locked: false
-    };
-    v.comments.push(newComment);
-    localChanges.newComments.push({ videoId: v.id, comment: newComment });
+      devStatus: null, devNote:'', fixStatus: null, followupText:'', editedAt: null
+    });
     logAudit(v, 'Comment Added', `[auto-url] at ${fmtTime(obs.time)}: ${obs.corner} — ${obs.text}`);
     pendingObservations = pendingObservations.filter(o => o.id !== id);
-    await commitChanges();
-    renderObservations(); renderCommentsPanel(); renderResolvedPanel();
+    saveState().then(() => { renderObservations(); renderCommentsPanel(); renderResolvedPanel(); });
   },
   rejectObs(el, id) {
     pendingObservations = pendingObservations.filter(o => o.id !== id);
     renderObservations();
   }
 };
+
 function seekVideo(video, t) {
   return new Promise(res => {
     const onSeek = () => { video.removeEventListener('seeked', onSeek); res(); };
@@ -1260,20 +1204,36 @@ function seekVideo(video, t) {
     video.currentTime = t;
   });
 }
+
+/* UPDATED: bottom regions widened from 28% to 45% width to better capture
+   full-length URL bars, which previously got cut off mid-string. */
 function cornerRegions(canvas) {
   const w = canvas.width, h = canvas.height;
   const cw = Math.floor(w * 0.28), ch = Math.floor(h * 0.28);
-  const coords = [['TopLeft',0,0], ['TopRight', w - cw, 0], ['BottomLeft', 0, h - ch], ['BottomRight', w - cw, h - ch]];
-  return coords.map(([label, x, y]) => {
-    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
-    c.getContext('2d').drawImage(canvas, x, y, cw, ch, 0, 0, cw, ch);
+  const bottomCw = Math.floor(w * 0.45);
+  const coords = [
+    ['TopLeft', 0, 0, cw, ch],
+    ['TopRight', w - cw, 0, cw, ch],
+    ['BottomLeft', 0, h - ch, bottomCw, ch],
+    ['BottomRight', w - bottomCw, h - ch, bottomCw, ch]
+  ];
+  return coords.map(([label, x, y, regionW, regionH]) => {
+    const c = document.createElement('canvas'); c.width = regionW; c.height = regionH;
+    c.getContext('2d').drawImage(canvas, x, y, regionW, regionH, 0, 0, regionW, regionH);
     return { label, canvas: c };
   });
 }
+
+/* UPDATED: normalizes OCR text first (collapses line breaks and extra
+   whitespace) so a single URL that Tesseract OCR'd across two wrapped
+   lines is treated as one continuous string instead of being split into
+   two separate, broken observations. */
 function extractUrls(text) {
+  const normalized = text.replace(/\s*\n\s*/g, '').replace(/\s{2,}/g, ' ');
   const re = /((https?:\/\/|www\.)[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|io|gov|edu)[^\s]*)/gi;
-  return text.match(re) || [];
+  return normalized.match(re) || [];
 }
+
 function renderObservations() {
   const area = document.getElementById('obsArea');
   if (!area) return;
@@ -1285,6 +1245,7 @@ function renderObservations() {
       <div class="flexgap"><button class="success" data-action="acceptObs" data-id="${o.id}">Accept</button><button class="danger" data-action="rejectObs" data-id="${o.id}">Reject</button></div>
     </div>`).join('');
 }
+
 /* ============== EVENT DELEGATION ============== */
 document.getElementById('app').addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
@@ -1293,8 +1254,16 @@ document.getElementById('app').addEventListener('click', (e) => {
   const fn = actions[el.dataset.action];
   if (fn) fn(el, el.dataset.id, e);
 });
+
 /* ============== INIT ============== */
 render();
 </script>
 </body>
 </html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
